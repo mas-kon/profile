@@ -1,6 +1,6 @@
 #!/bin/bash
 
-visudo
+/usr/sbin/visudo
 
 sudo -s
 cd
