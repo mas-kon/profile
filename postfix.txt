@@ -1,0 +1,22 @@
+======================= POSTFIX =====================================
+
+vim /etc/postfix/sasl_passwd
+
+[smtp.gmail.com]:587 username@gmail.com:password
+chmod 600 /etc/postfix/sasl_passwd
+
+postmap /etc/postfix/sasl_passwd
+
+vim /etc/postfix/main.cf
+
+relayhost = [smtp.gmail.com]:587
+smtp_use_tls = yes
+smtp_sasl_auth_enable = yes
+smtp_sasl_security_options =
+smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
+
+systemctl restart postfix.service
+
+======================= POSTFIX =====================================
+
