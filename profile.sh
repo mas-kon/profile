@@ -1,7 +1,7 @@
 #!/bin/bash
 
-apt update
-apt install mc sudo net-tools dnsutils mlocate htop git ntpdate iotop tmux vim
+sudo apt update
+sudo apt install mc sudo net-tools dnsutils mlocate htop git ntpdate iotop tmux vim
 
 cd
 git clone https://github.com/gpakosz/.tmux.git
@@ -12,13 +12,15 @@ git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
 wget https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -O .vimrc
 vim +PluginInstall +qall
 
-
+echo "export PATH=$PATH:/usr/sbin/" >> .bashrc
+echo "alias sss='sudo -s'" >> .bashrc
 echo "alias q='exit'" >> .bashrc
 echo "alias m='more'" >> .bashrc
 echo "alias g='grep'" >> .bashrc
-echo "alias sss='sudo -s'" >> .bashrc
 echo "alias tt='tail -f'" >> .bashrc
 echo "alias ll='ls -lha --color=auto'" >> .bashrc
 source .bashrc
 
+/usr/bin/updatedb
 
+exit
