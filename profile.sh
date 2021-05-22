@@ -20,4 +20,3 @@ echo "alias g='grep'" >> .bashrc
 echo "alias tt='tail -f'" >> .bashrc
 echo "alias ll='ls -lha --color=auto'" >> .bashrc
 source .bashrc
-
