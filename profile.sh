@@ -1,7 +1,7 @@
 #!/bin/bash
 
 sudo apt update
-sudo apt install apt install mc net-tools dnsutils mlocate htop git ntpdate iotop tmux gpg parted smartmontools -y
+sudo apt install mc net-tools dnsutils mlocate htop git ntpdate iotop tmux gpg parted smartmontools -y
 
 cd
 git clone https://github.com/gpakosz/.tmux.git
