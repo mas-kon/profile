@@ -18,6 +18,8 @@ echo "alias m='more'" >> .bashrc
 echo "alias g='grep'" >> .bashrc
 echo "alias tt='tail -f'" >> .bashrc
 echo "alias ll='ls -lha --color=auto'" >> .bashrc
+echo "if [ $(id -u) -ne 0 ]" >> .bashrc
+echo " then" >> .bashrc
 echo "    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]$ '" >> .bashrc
 echo "else" >> .bashrc
 echo "    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;31m\]\u@\h\[\033[00m\]:\[\033[01;35m\]\w\[\033[00m\]# '" >> .bashrc
