@@ -26,3 +26,6 @@ echo "    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;31m\]\u@\h\[\033[00m\
 echo "fi" >> .bashrc
 echo "alias getip='wget -qO- eth0.me'" >> .bashrc
 source .bashrc
+
+
+ipaddr=`getip`
