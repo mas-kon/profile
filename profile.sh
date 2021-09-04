@@ -28,4 +28,4 @@ echo "alias getip='wget -qO- eth0.me'" >> .bashrc
 source .bashrc
 
 
-ipaddr=`getip`
+ipaddr=wget -qO- eth0.me'
