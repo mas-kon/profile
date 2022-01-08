@@ -8,8 +8,8 @@ ln -s -f .tmux/.tmux.conf
 cp .tmux/.tmux.conf.local .
 
 git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
-wget https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -O .vimrc
 vim +PluginInstall +qall
+wget https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -O .vimrc
 
 echo "export PATH=$PATH:/usr/sbin/" >> .bashrc
 echo "alias sss='sudo -s'" >> .bashrc
