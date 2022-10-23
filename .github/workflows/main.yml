@@ -24,7 +24,7 @@ jobs:
           echo "Version - ${{ env.APP_VER }}"
           
       - name: Clone my repo
-        uses: actions/setup-node@v1
+        uses: actions/checkout@v2
       
       - name: List dir
         run: ls -al
