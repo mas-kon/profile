@@ -103,4 +103,4 @@ nnoremap <C-P> :bprev<CR>
 " Выключаем звук в Vim
 set visualbell t_vb=
 
-colorscheme putty 
+"colorscheme putty 
