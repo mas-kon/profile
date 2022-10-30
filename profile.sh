@@ -17,7 +17,8 @@ echo "alias sst='ss -nlptu'" >> .bashrc
 echo "alias sss='sudo -s'" >> .bashrc
 echo "alias q='exit'" >> .bashrc
 echo "alias m='more'" >> .bashrc
-echo "alias g='grep'" >> .bashrc
+echo "alias grep='grep --colour=always'" >> .bashrc
+echo "alias g='grep --colour=always'" >> .bashrc
 echo "alias tt='tail -f'" >> .bashrc
 echo "alias getip='wget -qO- eth0.me'" >> .bashrc
 echo "alias ll='ls -lha --color=auto'" >> .bashrc
