@@ -1,7 +1,7 @@
 #!/bin/bash
 
-yum -y update
-yum -y install wget vim mc net-tools dnsutils mlocate htop git ntpdate iotop tmux gpg bash-completion
+sudo yum -y update
+sudo yum -y install wget vim mc net-tools dnsutils mlocate htop git ntpdate iotop tmux gpg bash-completion
 
 git clone https://github.com/gpakosz/.tmux.git
 ln -s -f .tmux/.tmux.conf
