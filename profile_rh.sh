@@ -23,4 +23,3 @@ echo "alias tt='tail -f'" >> .bashrc
 echo "alias getip='wget -qO- eth0.me'" >> .bashrc
 echo "alias ll='ls -lha --color=auto'" >> .bashrc
 echo "PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]$ '" >> .bashrc
-exit
