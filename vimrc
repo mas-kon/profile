@@ -103,4 +103,10 @@ nnoremap <C-P> :bprev<CR>
 " Выключаем звук в Vim
 set visualbell t_vb=
 
+" = Запоминаем позицию курсора
+autocmd BufReadPost *
+  \ if line("'\"") > 0 && line("'\"") <= line("$") |
+  \   exe "normal g`\"" |
+  \ endif
+
 "colorscheme putty 
