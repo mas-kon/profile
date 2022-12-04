@@ -33,7 +33,7 @@ echo "alias bb='batcat -p --paging=never'" >> .zshrc
 echo "alias bat='batcat'" >> .zshrc
 echo "alias docker-compose='docker compose'" >> .zshrc
 
-echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlightin/zsh-syntax-highlighting.zsh" >> .zshrc
+echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> .zshrc
 
 echo "RPROMPT='\$(battery_pct_prompt)'" >> .zshrc
 echo "export BAT_THEME='Monokai Extended Bright'" >> .zshrc
