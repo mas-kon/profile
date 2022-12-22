@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sudo apt update && sudo apt install zsh bat curl vim mc net-tools dnsutils mlocate htop git ntpdate iotop tmux gpg parted bash-completion -y
+sudo apt update && sudo apt install zsh bat curl vim mc net-tools dnsutils mlocate htop git ntpdate iotop tmux gpg parted bash-completion fonts-powerline -y
 
 sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
