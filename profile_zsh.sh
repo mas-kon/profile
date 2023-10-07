@@ -34,7 +34,7 @@ echo "alias bb='batcat -p --paging=never'" >> .zshrc
 echo "alias bat='batcat'" >> .zshrc
 echo "alias docker-compose='docker compose'" >> .zshrc
 echo "export BAT_THEME='Monokai Extended Bright'" >> .zshrc
-echo "export MANPAGER=\"sh -c 'col -bx | bat -l man -p'\"" >> .zshrc
+echo "export MANPAGER=\"sh -c 'col -bx | batcat -l man -p'\"" >> .zshrc
 
 echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> .zshrc
 
