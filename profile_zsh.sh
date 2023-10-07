@@ -13,7 +13,7 @@ wget https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -O .vimrc
 vim +PluginInstall +qall
 sed -i 's/\"colorscheme/colorscheme/' .vimrc
 
-git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlightin
+git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 
 sed -i 's/robbyrussell/agnoster/' .zshrc
@@ -33,7 +33,7 @@ echo "alias bb='batcat -p --paging=never'" >> .zshrc
 echo "alias bat='batcat'" >> .zshrc
 echo "alias docker-compose='docker compose'" >> .zshrc
 
-echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlightin/zsh-syntax-highlighting.zsh" >> .zshrc
+echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> .zshrc
 
 echo "#PROMPT='\$(battery_pct_prompt)'" >> .zshrc
 echo "export BAT_THEME='Monokai Extended Bright'" >> .zshrc
