@@ -1,6 +1,7 @@
 #!/bin/bash
 
-sudo apt update && sudo apt install zsh bat curl vim mc net-tools dnsutils mlocate htop git ntpdate iotop tmux gpg parted bash-completion fonts-powerline -y
+# Setup 
+sudo apt update && sudo apt install zsh bat curl vim mc net-tools dnsutils mlocate htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https -y
 
 git clone https://github.com/gpakosz/.tmux.git
 ln -s -f .tmux/.tmux.conf
