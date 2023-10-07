@@ -2,8 +2,6 @@
 
 sudo apt update && sudo apt install zsh bat curl vim mc net-tools dnsutils mlocate htop git ntpdate iotop tmux gpg parted bash-completion fonts-powerline -y
 
-sh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
-
 git clone https://github.com/gpakosz/.tmux.git
 ln -s -f .tmux/.tmux.conf
 cp .tmux/.tmux.conf.local .
@@ -12,6 +10,8 @@ git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
 wget https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -O .vimrc
 vim +PluginInstall +qall
 sed -i 's/\"colorscheme/colorscheme/' .vimrc
+
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
@@ -32,12 +32,11 @@ echo "alias lll='ls -lha --color=auto'" >> .zshrc
 echo "alias bb='batcat -p --paging=never'" >> .zshrc
 echo "alias bat='batcat'" >> .zshrc
 echo "alias docker-compose='docker compose'" >> .zshrc
+echo "export BAT_THEME='Monokai Extended Bright'" >> .zshrc
+echo "export MANPAGER=\"sh -c 'col -bx | bat -l man -p'\"" >> .zshrc
 
 echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> .zshrc
 
-echo "#PROMPT='\$(battery_pct_prompt)'" >> .zshrc
-echo "export BAT_THEME='Monokai Extended Bright'" >> .zshrc
-echo "export MANPAGER=\"sh -c 'col -bx | bat -l man -p'\"" >> .zshrc
 
 
 
