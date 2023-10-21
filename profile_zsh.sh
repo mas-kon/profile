@@ -38,7 +38,7 @@ echo "export MANPAGER=\"sh -c 'col -bx | batcat -l man -p'\"" >> .zshrc
 
 echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> .zshrc
 
-chsh -s /bin/zsh $USER
+sudo chsh -s /bin/zsh $USER
 
 
 
