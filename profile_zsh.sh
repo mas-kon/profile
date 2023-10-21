@@ -9,7 +9,7 @@ cp .tmux/.tmux.conf.local .
 
 git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
 wget https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -O .vimrc
-vim +PluginInstall +qall
+TERM=dumb vim +PluginInstall +qall
 sed -i 's/\"colorscheme/colorscheme/' .vimrc
 
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
