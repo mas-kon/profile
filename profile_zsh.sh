@@ -17,7 +17,7 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/too
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 
-sed -i 's/robbyrussell/agnoster/' .zshrc
+sed -i 's/robbyrussell/bira/' .zshrc
 sed -i 's/\(git\)/git extract vscode battery zsh-autosuggestions terraform aws docker docker-compose/' .zshrc
 
 echo "export PATH=$PATH:/usr/sbin/" >> .zshrc
@@ -38,6 +38,7 @@ echo "export MANPAGER=\"sh -c 'col -bx | batcat -l man -p'\"" >> .zshrc
 
 echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> .zshrc
 
+chsh -s /bin/zsh $USER
 
 
 
