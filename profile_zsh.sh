@@ -20,7 +20,7 @@ git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 
 sed -i 's/robbyrussell/bira/' .zshrc
-sed -i 's/\(git\)/git extract vscode battery zsh-autosuggestions terraform aws docker docker-compose/' .zshrc
+sed -i 's/\(git\)/git extract vscode battery zsh-autosuggestions terraform aws docker docker-compose kubectl/' .zshrc
 
 echo "export PATH=$PATH:/usr/sbin/" >> .zshrc
 echo "alias sst='ss -nlptu'" >> .zshrc
