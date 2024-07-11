@@ -25,6 +25,7 @@ sed -i 's/\(git\)/git extract vscode battery zsh-autosuggestions terraform aws d
 echo "export PATH=$PATH:/usr/sbin/" >> .zshrc
 echo "alias sst='ss -nlptu'" >> .zshrc
 echo "alias sss='sudo -s'" >> .zshrc
+echo "alias less='less -F'" >> .zshrc
 echo "alias q='exit'" >> .zshrc
 echo "alias m='more'" >> .zshrc
 echo "alias grep='grep --colour=always'" >> .zshrc
@@ -38,6 +39,7 @@ echo "alias docker-compose='docker compose'" >> .zshrc
 echo "alias bench='wget -qO- bench.sh | bash'" >> .zshrc
 echo "export BAT_THEME='Monokai Extended Bright'" >> .zshrc
 echo "export MANPAGER=\"sh -c 'col -bx | batcat -l man -p'\"" >> .zshrc
+echo "export PAGER='less -F'" >> .zshrc
 
 echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> .zshrc
 
