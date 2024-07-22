@@ -36,6 +36,7 @@ echo "alias lll='ls -lha --color=auto'" >> .zshrc
 echo "alias bb='batcat -p --paging=never'" >> .zshrc
 echo "alias bat='batcat'" >> .zshrc
 echo "alias docker-compose='docker compose'" >> .zshrc
+echo "alias psc='ps xawf -eo pid,user,cgroup,args'" >> .zshrc
 echo "alias bench='wget -qO- bench.sh | bash'" >> .zshrc
 echo "export BAT_THEME='Monokai Extended Bright'" >> .zshrc
 echo "export MANPAGER=\"sh -c 'col -bx | batcat -l man -p'\"" >> .zshrc
