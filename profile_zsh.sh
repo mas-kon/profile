@@ -33,7 +33,7 @@ echo "alias g='grep --colour=always'" >> .zshrc
 echo "alias tt='tail -f'" >> .zshrc
 echo "alias getip='wget -qO- eth0.me'" >> .zshrc
 echo "alias lll='ls -lha --color=auto'" >> .zshrc
-echo "alias bb='batcat -p'" >> .zshrc
+echo "alias bb='batcat -pp'" >> .zshrc
 echo "alias bat='batcat'" >> .zshrc
 echo "alias docker-compose='docker compose'" >> .zshrc
 echo "alias psc='ps xawf -eo pid,user,cgroup,args'" >> .zshrc
