@@ -14,6 +14,7 @@ wget https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -O .vimrc
 TERM=dumb vim +PluginInstall +qall < /dev/tty
 sed -i 's/\"colorscheme/colorscheme/' .vimrc
 
+rm -Rf ~/.oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
