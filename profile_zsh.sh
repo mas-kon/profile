@@ -3,7 +3,7 @@
 cd $HOME
 
 # Setup 
-sudo apt update && sudo apt install zsh bat curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu -y
+sudo apt update && sudo apt install zsh bat exa curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu -y
 
 git clone https://github.com/gpakosz/.tmux.git
 ln -s -f .tmux/.tmux.conf
@@ -33,6 +33,12 @@ echo "alias grep='grep --colour=always'" >> .zshrc
 echo "alias g='grep --colour=always'" >> .zshrc
 echo "alias tt='tail -f'" >> .zshrc
 echo "alias getip='wget -qO- eth0.me'" >> .zshrc
+
+echo "alias ls='exa'" >> .zshrc
+echo "alias lll='ls -lha'" >> .zshrc
+echo "alias lm="ls --long --all --sort=modified"" >> .zshrc
+echo "alias lmm="ls -lbHigUmuSa --sort=modified --time-style=long-iso"" >> .zshrc
+
 echo "alias lll='ls -lha --color=auto'" >> .zshrc
 echo "alias bb='batcat -pp'" >> .zshrc
 echo "alias bat='batcat'" >> .zshrc
