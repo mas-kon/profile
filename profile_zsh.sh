@@ -9,7 +9,9 @@ if [[ ! -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
 fi
 
 # Install package
-sudo apt update && sudo apt install -y chrony fzf ripgrep xclip gdu zsh bat eza curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu
+sudo apt update && sudo apt install -y chrony fzf ripgrep xclip gdu zsh bat eza curl vim mc net-tools \
+            dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu \
+            build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
 
 LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | \grep -Po '"tag_name": *"v\K[^"]*')
 curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
@@ -88,8 +90,16 @@ fi
     echo "export BAT_THEME='Monokai Extended Bright'"
     echo "export MANPAGER=\"sh -c 'col -bx | batcat -l man -p'\""
     echo "export PAGER='less -F'"
-        echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+    echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+    echo 'export PYENV_ROOT="$HOME/.pyenv"'
+    echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"'
+    echo 'eval "$(pyenv init - zsh)"'
+    echo 'export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"'
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
 } >> .zshrc
+
+nvm install --lts
+pyenv install -l | grep 3.12
 
 # Change shell
 sudo chsh -s /bin/zsh ${USER}
