@@ -1,64 +1,71 @@
 #!/bin/bash
 set -e
 
-cd ~ || { echo "Не удалось перейти в домашний каталог."; exit 1; }
+cd ~ || { echo "Home catalog not found."; exit 1; }
 
 if [[ -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
     export C_USER=${USER}
-	su -c 'echo "${C_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${C_USER}'
+        su -c 'echo "${C_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${C_USER}'
 fi
 
-# Установка пакетов
-sudo apt update && sudo apt install -y fzf ripgrep xclip lazygit gdu zsh bat eza curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu
+# Install package
+sudo apt update && sudo apt install -y fzf ripgrep xclip gdu zsh bat eza curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline
+ca-certificates apt-transport-https sysstat ncdu
 
-# Клонирование tmux конфигурации
+LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | \grep -Po '"tag_name": *"v\K[^"]*')
+curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+tar xf lazygit.tar.gz lazygit
+sudo install lazygit -D -t /usr/local/bin/
+rm lazygit*
+
+# Clone tmux configuration
 if git clone https://github.com/gpakosz/.tmux.git; then
     ln -s -f .tmux/.tmux.conf
     cp .tmux/.tmux.conf.local .
 else
-    echo "Ошибка при клонировании репозитория .tmux."
+    echo "Error install .tmux."
 fi
 
-# Удаление oh-my-zsh, если он существует
+# Delete oh-my-zsh, if exits
 if [[ -d ~/.oh-my-zsh ]]; then
     rm -Rf ~/.oh-my-zsh
-    echo "Удален каталог ~/.oh-my-zsh."
+    echo "Removed ~/.oh-my-zsh."
 else
-    {echo "Каталог ~/.oh-my-zsh не найден, пропускаем удаление."; exit 1; }
+    echo "Directory ~/.oh-my-zsh not found, continue."
 fi
 
-# Установка oh-my-zsh
+# Install oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-# Клонирование плагинов zsh
+# Clone zsh
 mkdir -p ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 
-# Обновление .zshrc
+# Install .zshrc
 if [[ -f .zshrc ]]; then
     sed -i 's/robbyrussell/bira/' .zshrc
     sed -i 's/$git$/git extract vscode battery zsh-autosuggestions terraform aws docker docker-compose kubectl/' .zshrc
 else
-    {echo ".zshrc не найден."; exit 1; }
+    echo ".zshrc not found." && exit 1
 fi
 
-# Установка nvm
+# Install nvm
 NVIM_V=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep "tag_name" | cut -d '"' -f 4)
 if wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/${NVIM_V}/install.sh | bash; then
-    echo "nvm установлен."
+    echo "nvm installed."
 else
-    {echo "Ошибка при установке nvm."; exit 1; }
+    echo "Error install nvm." && exit 1
 fi
 
-# Установка pyenv
+# Install pyenv
 if curl https://pyenv.run | bash; then
-    echo "pyenv установлен."
+    echo "pyenv installed."
 else
-    {echo "Ошибка при установке pyenv."; exit 1; }
+    echo "Error install pyenv." && exit 1
 fi
 
-# Обновление .zshrc с алиасами
+# Aliases in .zshrc
 {
     echo "export PATH=\$PATH:/usr/sbin/"
     echo "alias sst='ss -nlptu'"
@@ -81,8 +88,10 @@ fi
     echo "export BAT_THEME='Monokai Extended Bright'"
     echo "export MANPAGER=\"sh -c 'col -bx | batcat -l man -p'\""
     echo "export PAGER='less -F'"
-	echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+        echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 } >> .zshrc
 
-# Изменение оболочки пользователя
+# Change shell
 sudo chsh -s /bin/zsh ${USER}
+
+echo "All installed."
