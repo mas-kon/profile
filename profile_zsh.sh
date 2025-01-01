@@ -17,11 +17,9 @@ tar xf lazygit.tar.gz lazygit
 sudo install lazygit -D -t /usr/local/bin/
 rm lazygit*
 
-# Clone tmux configuration
-if git clone https://github.com/gpakosz/.tmux.git; then
-    ln -s -f .tmux/.tmux.conf
-    cp .tmux/.tmux.conf.local .
-fi
+git clone https://github.com/gpakosz/.tmux.git
+ln -s -f .tmux/.tmux.conf
+cp .tmux/.tmux.conf.local .
 
 # Delete oh-my-zsh, if exits
 if [[ -d ~/.oh-my-zsh ]]; then
