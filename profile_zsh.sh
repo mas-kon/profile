@@ -1,70 +1,88 @@
 #!/bin/bash
+set -e
 
-cd ~
+cd ~ || { echo "Не удалось перейти в домашний каталог."; exit 1; }
 
-if [ "$UID" -ne 0 ]; then
-    echo "${USER} ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/${USER}
-    echo "Пользователь ${USER} добавлен в sudoers.d с правами без пароля."
-else
-    echo "User ${USER} already ROOT."
+if [[ -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
+    export C_USER=${USER}
+	su -c 'echo "${C_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${C_USER}'
 fi
 
-# Setup 
-sudo apt update && sudo apt install fzf ripgrep xclip lazygit gdu zsh bat exa curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu -y
+# Установка пакетов
+sudo apt update && sudo apt install -y fzf ripgrep xclip lazygit gdu zsh bat exa curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu
 
-git clone https://github.com/gpakosz/.tmux.git
-ln -s -f .tmux/.tmux.conf
-cp .tmux/.tmux.conf.local .
+# Клонирование tmux конфигурации
+if git clone https://github.com/gpakosz/.tmux.git; then
+    ln -s -f .tmux/.tmux.conf
+    cp .tmux/.tmux.conf.local .
+else
+    echo "Ошибка при клонировании репозитория .tmux."
+fi
 
-git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
-wget https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -O .vimrc
-TERM=dumb vim +PluginInstall +qall < /dev/tty
-sed -i 's/\"colorscheme/colorscheme/' .vimrc
+# Удаление oh-my-zsh, если он существует
+if [[ -d ~/.oh-my-zsh ]]; then
+    rm -Rf ~/.oh-my-zsh
+    echo "Удален каталог ~/.oh-my-zsh."
+else
+    {echo "Каталог ~/.oh-my-zsh не найден, пропускаем удаление."; exit 1; }
+fi
 
-rm -Rf ~/.oh-my-zsh
+# Установка oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
+# Клонирование плагинов zsh
+mkdir -p ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins
 git clone https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
 git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
 
-sed -i 's/robbyrussell/bira/' .zshrc
-sed -i 's/\(git\)/git extract vscode battery zsh-autosuggestions terraform aws docker docker-compose kubectl/' .zshrc
+# Обновление .zshrc
+if [[ -f .zshrc ]]; then
+    sed -i 's/robbyrussell/bira/' .zshrc
+    sed -i 's/$git$/git extract vscode battery zsh-autosuggestions terraform aws docker docker-compose kubectl/' .zshrc
+else
+    {echo ".zshrc не найден."; exit 1; }
+fi
 
-export NVIM_V=`curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep "tag_name" | cut -d '"' -f 4`
-wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/${NVIM_V}/install.sh | bash
+# Установка nvm
+NVIM_V=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep "tag_name" | cut -d '"' -f 4)
+if wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/${NVIM_V}/install.sh | bash; then
+    echo "nvm установлен."
+else
+    {echo "Ошибка при установке nvm."; exit 1; }
+fi
 
-curl https://pyenv.run | bash
+# Установка pyenv
+if curl https://pyenv.run | bash; then
+    echo "pyenv установлен."
+else
+    {echo "Ошибка при установке pyenv."; exit 1; }
+fi
 
-echo "export PATH=$PATH:/usr/sbin/" >> .zshrc
-echo "alias sst='ss -nlptu'" >> .zshrc
-echo "alias sss='sudo -s'" >> .zshrc
-echo "alias less='less -F'" >> .zshrc
-echo "alias q='exit'" >> .zshrc
-echo "alias m='more'" >> .zshrc
-echo "alias grep='grep --colour=always'" >> .zshrc
-echo "alias g='grep --colour=always'" >> .zshrc
-echo "alias tt='tail -f'" >> .zshrc
-echo "alias getip='wget -qO- eth0.me'" >> .zshrc
+# Обновление .zshrc с алиасами
+{
+    echo "export PATH=\$PATH:/usr/sbin/"
+    echo "alias sst='ss -nlptu'"
+    echo "alias sss='sudo -s'"
+    echo "alias less='less -F'"
+    echo "alias q='exit'"
+    echo "alias m='more'"
+    echo "alias grep='grep --colour=always'"
+    echo "alias g='grep --colour=always'"
+    echo "alias tt='tail -f'"
+    echo "alias getip='wget -qO- eth0.me'"
+    echo "alias ls='exa'"
+    echo "alias lll='ls -lha'"
+    echo "alias lm='ls --long --all --sort=modified'"
+    echo "alias lmm='ls -lbHigUmuSa --sort=modified --time-style=long-iso'"
+    echo "alias bb='batcat -pp'"
+    echo "alias bat='batcat'"
+    echo "alias psc='ps xawf -eo pid,user,cgroup,args'"
+    echo "alias bench='wget -qO- bench.sh | bash'"
+    echo "export BAT_THEME='Monokai Extended Bright'"
+    echo "export MANPAGER=\"sh -c 'col -bx | batcat -l man -p'\""
+    echo "export PAGER='less -F'"
+	echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+} >> .zshrc
 
-echo "alias ls='exa'" >> .zshrc
-echo "alias lll='ls -lha'" >> .zshrc
-echo "alias lm="ls --long --all --sort=modified"" >> .zshrc
-echo "alias lmm="ls -lbHigUmuSa --sort=modified --time-style=long-iso"" >> .zshrc
-
-echo "alias lll='ls -lha --color=auto'" >> .zshrc
-echo "alias bb='batcat -pp'" >> .zshrc
-echo "alias bat='batcat'" >> .zshrc
-echo "alias docker-compose='docker compose'" >> .zshrc
-echo "alias psc='ps xawf -eo pid,user,cgroup,args'" >> .zshrc
-echo "alias bench='wget -qO- bench.sh | bash'" >> .zshrc
-echo "export BAT_THEME='Monokai Extended Bright'" >> .zshrc
-echo "export MANPAGER=\"sh -c 'col -bx | batcat -l man -p'\"" >> .zshrc
-echo "export PAGER='less -F'" >> .zshrc
-
-echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> .zshrc
-
-sudo chsh -s /bin/zsh $USER
-
-source ~/.zshrc
-
-
+# Изменение оболочки пользователя
+sudo chsh -s /bin/zsh ${USER}
