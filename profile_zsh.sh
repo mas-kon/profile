@@ -15,17 +15,21 @@ sudo apt update && sudo apt install -y chrony fzf ripgrep xclip gdu zsh bat eza 
 
 sudo apt autoremove
 
+# Install neovim
 curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
 sudo rm -rf /opt/nvim
 sudo tar -C /opt -xzf nvim-linux64.tar.gz
 sudo ln -s /opt/nvim-linux64/bin/nvim /usr/local/bin/nvim
+rm nvim-linux64.tar.gz
 
+# Install lazygit
 LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | \grep -Po '"tag_name": *"v\K[^"]*')
 curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
 tar xf lazygit.tar.gz lazygit
 sudo install lazygit -D -t /usr/local/bin/
 rm lazygit*
 
+# Install tmux
 git clone https://github.com/gpakosz/.tmux.git
 ln -s -f .tmux/.tmux.conf
 cp .tmux/.tmux.conf.local .
@@ -77,6 +81,7 @@ fi
 # Aliases in .zshrc
 {
     echo "export PATH=\$PATH:/usr/sbin/"
+    echo "alias vim='nvim'"
     echo "alias sst='ss -nlptu'"
     echo "alias sss='sudo -s'"
     echo "alias less='less -F'"
