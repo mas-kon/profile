@@ -3,7 +3,7 @@
 cd $HOME
 
 # Setup 
-sudo apt update && sudo apt install zsh bat exa curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu -y
+sudo apt update && sudo apt install fzf ripgrep xclip lazygit gdu zsh bat exa curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu -y
 
 git clone https://github.com/gpakosz/.tmux.git
 ln -s -f .tmux/.tmux.conf
@@ -22,6 +22,11 @@ git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-m
 
 sed -i 's/robbyrussell/bira/' .zshrc
 sed -i 's/\(git\)/git extract vscode battery zsh-autosuggestions terraform aws docker docker-compose kubectl/' .zshrc
+
+export NVIM_V=`curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep "tag_name" | cut -d '"' -f 4`
+wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/${NVIM_V}/install.sh | bash
+
+curl https://pyenv.run | bash
 
 echo "export PATH=$PATH:/usr/sbin/" >> .zshrc
 echo "alias sst='ss -nlptu'" >> .zshrc
@@ -53,5 +58,6 @@ echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-high
 
 sudo chsh -s /bin/zsh $USER
 
+source ~/.zshrc
 
 
