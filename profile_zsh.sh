@@ -3,9 +3,9 @@ set -e
 
 cd ~ || { echo "Home catalog not found."; exit 1; }
 
-if [[ -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
+if [[ ! -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
     export C_USER=${USER}
-        su -c 'echo "${C_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${C_USER}'
+    su -c 'echo "${C_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${C_USER}'
 fi
 
 # Install package
