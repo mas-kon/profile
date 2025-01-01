@@ -21,8 +21,6 @@ rm lazygit*
 if git clone https://github.com/gpakosz/.tmux.git; then
     ln -s -f .tmux/.tmux.conf
     cp .tmux/.tmux.conf.local .
-else
-    echo "Error install .tmux."
 fi
 
 # Delete oh-my-zsh, if exits
