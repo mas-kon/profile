@@ -100,6 +100,8 @@ fi
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
 } >> .zshrc
 
+source ~/.zshrc
+
 nvm install --lts
 pyenv install -l | grep 3.12
 
