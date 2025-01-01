@@ -1,6 +1,13 @@
 #!/bin/bash
 
-cd $HOME
+cd ~
+
+if [ "$UID" -ne 0 ]; then
+    echo "${USER} ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/${USER}
+    echo "Пользователь ${USER} добавлен в sudoers.d с правами без пароля."
+else
+    echo "User ${USER} already ROOT."
+fi
 
 # Setup 
 sudo apt update && sudo apt install fzf ripgrep xclip lazygit gdu zsh bat exa curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu -y
