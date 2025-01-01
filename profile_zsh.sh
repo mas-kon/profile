@@ -20,6 +20,11 @@ rm lazygit*
 git clone https://github.com/gpakosz/.tmux.git
 ln -s -f .tmux/.tmux.conf
 cp .tmux/.tmux.conf.local .
+{
+    echo 'set -g default-terminal "screen-256color"' 
+    echo 'set -ga terminal-overrides ",xterm*:smcup@:rmcup@"'
+} >> .tmux.conf.local
+
 
 # Delete oh-my-zsh, if exits
 if [[ -d ~/.oh-my-zsh ]]; then
