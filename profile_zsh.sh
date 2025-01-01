@@ -9,7 +9,7 @@ if [[ ! -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
 fi
 
 # Install package
-sudo apt update && sudo apt install -y fzf ripgrep xclip gdu zsh bat eza curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu
+sudo apt update && sudo apt install -y chrony fzf ripgrep xclip gdu zsh bat eza curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu
 
 LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | \grep -Po '"tag_name": *"v\K[^"]*')
 curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
