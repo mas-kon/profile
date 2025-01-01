@@ -9,7 +9,7 @@ if [[ -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
 fi
 
 # Установка пакетов
-sudo apt update && sudo apt install -y fzf ripgrep xclip lazygit gdu zsh bat exa curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu
+sudo apt update && sudo apt install -y fzf ripgrep xclip lazygit gdu zsh bat eza curl vim mc net-tools dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu
 
 # Клонирование tmux конфигурации
 if git clone https://github.com/gpakosz/.tmux.git; then
