@@ -134,6 +134,6 @@ rm -rf /tmp/nvim
 sudo chsh -s /bin/zsh ${USER}
 
 echo "All installed."
-
+echo "===================  !!!!!!!!!!!!   ======================="
 echo "Do not forget execute 'nvm install --lts' for node js"
 echo "Do not forget execute 'pyenv install 3.12 && pyenv global 3.12' for python"
