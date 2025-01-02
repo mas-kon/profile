@@ -22,11 +22,13 @@ set -e
 sudo apt autoremove
 
 # Install neovim
+if [[ ! -L /usr/local/bin/nvim ]]; then
 curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
 sudo rm -rf /opt/nvim
 sudo tar -C /opt -xzf nvim-linux64.tar.gz
 sudo ln -s /opt/nvim-linux64/bin/nvim /usr/local/bin/nvim
 rm nvim-linux64.tar.gz
+fi
 
 # Install lazygit
 LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | \grep -Po '"tag_name": *"v\K[^"]*')
