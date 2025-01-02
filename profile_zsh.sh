@@ -83,18 +83,20 @@ else
     echo "Error install pyenv." && exit 1
 fi
 
-# Install AstroNvim
-#if [[ -d ~/.config/nvim ]]; then
-#    mv ~/.config/nvim ~/.config/nvim.bak
-#    mv ~/.local/share/nvim ~/.local/share/nvim.bak
-#    mv ~/.local/state/nvim ~/.local/state/nvim.bak
-#    mv ~/.cache/nvim ~/.cache/nvim.bak
-#    echo "Old config NeoVim backuped."
-#else
-#    echo "Directory ~/.config/nvim not found, continue."
-#fi
-#git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim
-#rm -rf ~/.config/nvim/.git
+# Install my AstroNvim 
+if [[ -d ~/.config/nvim ]]; then
+   mv ~/.config/nvim ~/.config/nvim.bak
+   mv ~/.local/share/nvim ~/.local/share/nvim.bak
+   mv ~/.local/state/nvim ~/.local/state/nvim.bak
+   mv ~/.cache/nvim ~/.cache/nvim.bak
+   echo "Old config NeoVim backuped."
+else
+   echo "Directory ~/.config/nvim not found, continue."
+fi
+git clone https://github.com/mas-kon/profile /tmp/nvim
+mkdir -p ~/.config/nvim
+mv /tmp/nvim/nvim ~/.config/nvim/
+rm -rf /tmp/nvim
 
 # Aliases in .zshrc
 {
