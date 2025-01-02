@@ -5,7 +5,7 @@ cd ~ || { echo "Home catalog not found."; exit 1; }
 
 if [[ ! -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
     export C_USER=${USER}
-    su -c 'echo "${C_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${C_USER} && systemctl restart systemd-timesyncd'
+    su -c 'echo "${C_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${C_USER}'
 fi
 
 # Install package
@@ -16,6 +16,7 @@ sudo apt update && sudo apt install -y chrony fzf ripgrep xclip gdu zsh bat curl
 set +e
 sudo apt install -y eza
 sudo apt install -y exa 
+sudo systemctl restart systemd-timesyncd
 
 set -e
 sudo apt autoremove
