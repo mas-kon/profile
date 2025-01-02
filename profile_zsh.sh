@@ -9,10 +9,15 @@ if [[ ! -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
 fi
 
 # Install package
-sudo apt update && sudo apt install -y chrony fzf ripgrep xclip gdu zsh bat eza curl vim mc net-tools tree\
-            dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu \
+sudo apt update && sudo apt install -y chrony fzf ripgrep xclip gdu zsh bat curl vim mc tree net-tools bash-completion \
+            dnsutils htop git chrony iotop tmux gpg parted fonts-powerline ca-certificates apt-transport-https sysstat ncdu \
             build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
 
+set +e
+sudo apt install -y eza
+sudo apt install -y exa 
+
+set -e
 sudo apt autoremove
 
 # Install neovim
