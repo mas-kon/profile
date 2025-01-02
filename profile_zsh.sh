@@ -38,6 +38,11 @@ cp .tmux/.tmux.conf.local .
     echo 'set -ga terminal-overrides ",xterm*:smcup@:rmcup@"'
 } >> .tmux.conf.local
 
+#Install bottom https://github.com/ClementTsang/bottom
+BTM_VERSION=$(curl -s "https://api.github.com/repos/ClementTsang/bottom/releases/latest" | grep  '"tag_name"' | cut -d '"' -f 4)
+curl -Lo /tmp/bottom_0.10.2-1_amd64.deb "https://github.com/ClementTsang/bottom/releases/download/${BTM_VERSION}/bottom_${BTM_VERSION}-1_amd64.deb"
+sudo dpkg -i /tmp/bottom_0.10.2-1_amd64.deb
+rm /tmp/bottom_0.10.2-1_amd64.deb
 
 # Delete oh-my-zsh, if exits
 if [[ -d ~/.oh-my-zsh ]]; then
@@ -64,8 +69,8 @@ else
 fi
 
 # Install nvm
-NVIM_V=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep "tag_name" | cut -d '"' -f 4)
-if wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/${NVIM_V}/install.sh | bash; then
+NVM_V=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep "tag_name" | cut -d '"' -f 4)
+if wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_V}/install.sh | bash; then
     echo "nvm installed."
 else
     echo "Error install nvm." && exit 1
@@ -77,6 +82,19 @@ if curl https://pyenv.run | bash; then
 else
     echo "Error install pyenv." && exit 1
 fi
+
+# Install AstroNvim
+if [[ -d ~/.config/nvim ]]; then
+    mv ~/.config/nvim ~/.config/nvim.bak
+	mv ~/.local/share/nvim ~/.local/share/nvim.bak
+	mv ~/.local/state/nvim ~/.local/state/nvim.bak
+	mv ~/.cache/nvim ~/.cache/nvim.bak
+    echo "Old config NeoVim backuped."
+else
+    echo "Directory ~/.config/nvim not found, continue."
+fi
+git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim
+rm -rf ~/.config/nvim/.git
 
 # Aliases in .zshrc
 {
