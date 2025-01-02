@@ -86,9 +86,9 @@ fi
 # Install AstroNvim
 if [[ -d ~/.config/nvim ]]; then
     mv ~/.config/nvim ~/.config/nvim.bak
-	mv ~/.local/share/nvim ~/.local/share/nvim.bak
-	mv ~/.local/state/nvim ~/.local/state/nvim.bak
-	mv ~/.cache/nvim ~/.cache/nvim.bak
+    mv ~/.local/share/nvim ~/.local/share/nvim.bak
+    mv ~/.local/state/nvim ~/.local/state/nvim.bak
+    mv ~/.cache/nvim ~/.cache/nvim.bak
     echo "Old config NeoVim backuped."
 else
     echo "Directory ~/.config/nvim not found, continue."
