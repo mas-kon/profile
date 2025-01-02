@@ -95,7 +95,7 @@ else
 fi
 git clone https://github.com/mas-kon/profile /tmp/nvim
 mkdir -p ~/.config/nvim
-mv /tmp/nvim/nvim ~/.config/nvim/
+mv /tmp/nvim/nvim ~/.config/
 rm -rf /tmp/nvim
 
 # Aliases in .zshrc
