@@ -135,5 +135,5 @@ sudo chsh -s /bin/zsh ${USER}
 
 echo "All installed."
 
-echo "Don't forget execute \e[36mnvm install --lts\e[0m" for node js"
-echo "Don't forget execute \e[36mpyenv install 3.12 && pyenv global 3.12\e[0m for python"
+echo "Don't forget execute \033[33m'mnvm install --lts'\033[0m for node js"
+echo "Don't forget execute \033[33mpyenv install 3.12 && pyenv global 3.12\033[0m for python"
