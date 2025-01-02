@@ -9,7 +9,7 @@ if [[ ! -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
 fi
 
 # Install package
-sudo apt update && sudo apt install -y chrony fzf ripgrep xclip gdu zsh bat eza curl vim mc net-tools \
+sudo apt update && sudo apt install -y chrony fzf ripgrep xclip gdu zsh bat eza curl vim mc net-tools tree\
             dnsutils htop git chrony iotop tmux gpg parted bash-completion fonts-powerline ca-certificates apt-transport-https sysstat ncdu \
             build-essential libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
 
@@ -84,17 +84,17 @@ else
 fi
 
 # Install AstroNvim
-if [[ -d ~/.config/nvim ]]; then
-    mv ~/.config/nvim ~/.config/nvim.bak
-    mv ~/.local/share/nvim ~/.local/share/nvim.bak
-    mv ~/.local/state/nvim ~/.local/state/nvim.bak
-    mv ~/.cache/nvim ~/.cache/nvim.bak
-    echo "Old config NeoVim backuped."
-else
-    echo "Directory ~/.config/nvim not found, continue."
-fi
-git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim
-rm -rf ~/.config/nvim/.git
+#if [[ -d ~/.config/nvim ]]; then
+#    mv ~/.config/nvim ~/.config/nvim.bak
+#    mv ~/.local/share/nvim ~/.local/share/nvim.bak
+#    mv ~/.local/state/nvim ~/.local/state/nvim.bak
+#    mv ~/.cache/nvim ~/.cache/nvim.bak
+#    echo "Old config NeoVim backuped."
+#else
+#    echo "Directory ~/.config/nvim not found, continue."
+#fi
+#git clone --depth 1 https://github.com/AstroNvim/template ~/.config/nvim
+#rm -rf ~/.config/nvim/.git
 
 # Aliases in .zshrc
 {
