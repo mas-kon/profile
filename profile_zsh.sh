@@ -38,13 +38,24 @@ sudo install lazygit -D -t /usr/local/bin/
 rm lazygit*
 
 # Install tmux
+if [[ -d ~/.tmux ]]; then
+mv ~/.tmux ~/.tmux.bak
 git clone https://github.com/gpakosz/.tmux.git
 ln -s -f .tmux/.tmux.conf
 cp .tmux/.tmux.conf.local .
 {
     echo 'set -g default-terminal "screen-256color"' 
     echo 'set -ga terminal-overrides ",xterm*:smcup@:rmcup@"'
+    echo 'tmux_conf_copy_to_os_clipboard=true'
+    echo 'set -g mouse on'
+    echo 'set -g @plugin "tmux-plugins/tmux-sessionist"'
+    echo 'set -g @plugin "tmux-plugins/tmux-resurrect"'
+    echo 'set -g @plugin "tmux-plugins/tmux-continuum"'
+    echo 'set -g @continuum-restore "on"'
+    echo 'unbind %'
+    echo 'bind | split-window -h'
 } >> .tmux.conf.local
+fi
 
 #Install bottom https://github.com/ClementTsang/bottom
 BTM_VERSION=$(curl -s "https://api.github.com/repos/ClementTsang/bottom/releases/latest" | grep  '"tag_name"' | cut -d '"' -f 4)
@@ -70,8 +81,8 @@ git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-m
 
 # Install .zshrc
 if [[ -f .zshrc ]]; then
-    sed -i 's/robbyrussell/bira/' .zshrc
-    sed -i 's/$git$/git extract vscode battery zsh-autosuggestions terraform aws docker docker-compose kubectl/' .zshrc
+    sed -i 's/robbyrussell/bura/' .zshrc
+    sed -i 's/$git$/git extract vscode battery zsh-autosuggestions terraform aws docker docker-compose kubectl tmux/' .zshrc
 else
     echo ".zshrc not found." && exit 1
 fi
