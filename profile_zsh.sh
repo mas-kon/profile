@@ -9,7 +9,7 @@ if [[ ! -f /etc/sudoers.d/${USER} || "$UID" -ne 0 ]]; then
 fi
 
 # Install package
-sudo apt update && sudo apt install -y tree mc bat zsh chrony curl vim htop git build-essential ca-certificates apt-transport-https sysstat ncdu
+sudo apt update && sudo apt install -y tree mc bat zsh chrony curl vim htop git build-essential ca-certificates apt-transport-https sysstat ncdu python3-venv
 
 set +e
 sudo apt install -y fzf ripgrep gdu net-tools bash-completion duf dnsutils iotop tmux gpg parted fonts-powerline fd-find \
