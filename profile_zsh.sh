@@ -153,7 +153,7 @@ rm -rf /tmp/nvim
 } >> .zshrc
 
 # Change shell
-sudo chsh -s /bin/zsh ${USER}
+sudo chsh -s "$(which zsh)" $USER
 
 echo "All installed."
 echo "===================  !!!!!!!!!!!!   ======================="
