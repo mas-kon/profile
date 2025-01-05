@@ -84,7 +84,7 @@ git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-m
 # Install .zshrc
 if [[ -f .zshrc ]]; then
     sed -i 's/robbyrussell/bira/' .zshrc
-    sed -i 's/$git$/git extract vscode battery zsh-autosuggestions terraform aws docker docker-compose kubectl tmux/' .zshrc
+    sed -i 's/plugins=(.*)$/plugins=(z git zsh-syntax-highlighting jira zsh-autosuggestions aliases poetry battery zsh-autosuggestions terraform aws docker docker-compose kubectl tmux)/' .zshrc
 else
     echo ".zshrc not found." && exit 1
 fi
