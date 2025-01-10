@@ -98,11 +98,11 @@ else
 fi
 
 # Install pyenv
-if curl https://pyenv.run | bash; then
-    echo "pyenv installed."
-else
-    echo "Error install pyenv." && exit 1
-fi
+#if curl https://pyenv.run | bash; then
+#    echo "pyenv installed."
+#else
+#    echo "Error install pyenv." && exit 1
+#fi
 
 # Install my AstroNvim 
 if [[ -d ~/.config/nvim ]]; then
