@@ -175,7 +175,7 @@ install_pyenv(){
 
 install_poetry(){
 	curl -sSL https://install.python-poetry.org | POETRY_VERSION=$1 python3 -
- 	$HOME/.local/bin/poetry config virtualenvs.create false
+ 	$HOME/.local/bin/poetry config virtualenvs.in-project true
 }
 
 
