@@ -266,6 +266,7 @@ case $choice in
     2)
         read -rp "Do you want to install pyenv? (y/N): " install_pyenv_choice
 	read -rp "Do you want to install docker? (y/N): " install_docker_choice
+ 	read -rp "Do you want to install poetry? (y/N): " install_poetry_choice
         disable_sudo_password
         add_sudoers_entry
         min_install
@@ -286,7 +287,10 @@ case $choice in
             install_pyenv
         fi
 	
-	install_poetry
+        if [[ "$install_poetry_choice" =~ ^[Yy]$ ]]; then
+            install_poetry
+        fi	
+	
         install_astro_nvim
         add_aliases
         ;;
