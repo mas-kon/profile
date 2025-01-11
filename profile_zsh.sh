@@ -174,7 +174,7 @@ install_pyenv(){
 }
 
 install_poetry(){
-	curl -sSL https://install.python-poetry.org | python3 -
+	curl -sSL https://install.python-poetry.org | POETRY_VERSION=$1 python3 -
  	$HOME/.local/bin/poetry config virtualenvs.create false
 }
 
@@ -288,6 +288,7 @@ case $choice in
         fi
 	
         if [[ "$install_poetry_choice" =~ ^[Yy]$ ]]; then
+	    read -rp "Version of poetry? : " poetry_version
             install_poetry
         fi	
 	
