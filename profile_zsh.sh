@@ -44,11 +44,11 @@ extended_install() {
 # Install neovim
 install_neovim() {
     if [[ ! -L /usr/local/bin/nvim ]]; then
-        curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz
+        curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz
         sudo rm -rf /opt/nvim
-        sudo tar -C /opt -xzf nvim-linux64.tar.gz
-        sudo ln -s /opt/nvim-linux64/bin/nvim /usr/local/bin/nvim
-        rm nvim-linux64.tar.gz
+        sudo tar -C /opt -xzf nvim-linux-x86_64.tar.gz
+        sudo ln -s /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
+        rm nvim-linux-x86_64.tar.gz
     fi
 }
 
@@ -159,27 +159,16 @@ install_nvm() {
     fi
 }
 
-# Install pyenv
-install_pyenv(){
-    if curl https://pyenv.run | bash; then
-        echo "pyenv installed."
-        {
-            echo 'export PYENV_ROOT="$HOME/.pyenv"'
-            echo '[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"'
-            echo 'eval "$(pyenv init - zsh)"'
-        } >> .zshrc
+# Install UV
+install_uv(){
+    if curl -LsSf https://astral.sh/uv/install.sh | sh; then
+        echo 'eval "$(uv generate-shell-completion zsh)"' >> ~/.zshrc
+        echo 'eval "$(uvx --generate-shell-completion zsh)"' >> ~/.zshrc
+        echo "UV installed."
     else
-        echo "Error install pyenv." && exit 1
+        echo "Error install UV." && exit 1
     fi
 }
-
-# Install poetry
-install_poetry(){
-	curl -sSL https://install.python-poetry.org | POETRY_VERSION=$1 python3 -
- 	$HOME/.local/bin/poetry config virtualenvs.in-project true
-  	$HOME/.local/bin/poetry self add poetry-plugin-shell
-}
-
 
 # Install my AstroNvim 
 install_astro_nvim(){
@@ -266,9 +255,8 @@ case $choice in
         add_aliases
         ;;
     2)
-        read -rp "Do you want to install pyenv? (y/N): " install_pyenv_choice
-	read -rp "Do you want to install docker? (y/N): " install_docker_choice
- 	read -rp "Do you want to install poetry? (y/N): " install_poetry_choice
+        read -rp "Do you want to install UV? (y/N): " install_uv_choice
+	    read -rp "Do you want to install docker? (y/N): " install_docker_choice
         disable_sudo_password
         add_sudoers_entry
         min_install
@@ -285,13 +273,8 @@ case $choice in
         install_oh_my_zsh
         install_nvm
 
-        if [[ "$install_pyenv_choice" =~ ^[Yy]$ ]]; then
-            install_pyenv
-        fi
-	
-        if [[ "$install_poetry_choice" =~ ^[Yy]$ ]]; then
-	    read -rp "Version of poetry? : " poetry_version
-            install_poetry "$poetry_version"
+        if [[ "$install_uv_choice" =~ ^[Yy]$ ]]; then
+            install_uv
         fi	
 	
         install_astro_nvim
