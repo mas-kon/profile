@@ -3,22 +3,22 @@ set -e
 
 cd ~ || { echo "Home catalog not found."; exit 1; }
 
-# Enable sudo without password
-# disable_sudo_password() {
-#     if [[ $(id -nG "$USER" | grep -qw "sudo") ]]; then
-#         echo "${USER} ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/${USER}
-#         fi
-# }
+Enable sudo without password
+disable_sudo_password() {
+    if [[ $(id -nG "$USER" | grep -qw "sudo") ]]; then
+        echo "${USER} ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/${USER}
+        fi
+}
 
 
-# Enable sudo without password
-# add_sudoers_entry() {
-#     if [[ ! -f /etc/sudoers.d/${USER} || "$UID" -ne 0 || ! $(id -nG "$USER" | grep -qw "sudo") || ! $(id -nG "$USER" | grep -qw "adm") ]]; then
-#         export C_USER=${USER}
-#         su -c 'echo "${C_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${C_USER}'
-#     fi
-#     sudo systemctl restart systemd-timesyncd
-# }
+Enable sudo without password
+add_sudoers_entry() {
+    if [[ ! -f /etc/sudoers.d/${USER} || "$UID" -ne 0 || ! $(id -nG "$USER" | grep -qw "sudo") || ! $(id -nG "$USER" | grep -qw "adm") ]]; then
+        export C_USER=${USER}
+        su -c 'echo "${C_USER} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${C_USER}'
+    fi
+    sudo systemctl restart systemd-timesyncd
+}
 
 
 # Install package
@@ -256,9 +256,18 @@ case $choice in
         ;;
     2)
         read -rp "Do you want to install UV? (y/N): " install_uv_choice
-	    read -rp "Do you want to install docker? (y/N): " install_docker_choice
-        disable_sudo_password
-        add_sudoers_entry
+	read -rp "Do you want to install docker? (y/N): " install_docker_choice
+        read -rp "Do you want to disable_sudo_password? (y/N): " disable_sudo_password_choice
+        read -rp "Do you want to add_sudoers_entry? (y/N): " add_sudoers_entry_choice
+	
+	if [[ "$disable_sudo_password_choice" =~ ^[Yy]$ ]]; then
+            disable_sudo_password
+        fi
+
+ 	if [[ "$add_sudoers_entry_choice" =~ ^[Yy]$ ]]; then
+            add_sudoers_entry
+        fi
+	
         min_install
         extended_install
         install_neovim
