@@ -82,7 +82,7 @@ install_docker() {
 install_tmux() {
     if [[ -d ~/.tmux ]]; then
         mv ~/.tmux ~/.tmux.bak
-        git clone https://github.com/gpakosz/.tmux.git
+        git clone --single-branch https://github.com/gpakosz/.tmux.git
         ln -s -f .tmux/.tmux.conf
         cp .tmux/.tmux.conf.local .
         {
