@@ -86,6 +86,8 @@ install_tmux() {
         ln -s -f .tmux/.tmux.conf
         cp .tmux/.tmux.conf.local .
         {
+            echo 'set -g set-titles off'
+	    echo 'set -g set-titles-string ""'
             echo 'set -g default-terminal "screen-256color"' 
             echo 'set -ga terminal-overrides ",xterm*:smcup@:rmcup@"'
             echo 'tmux_conf_copy_to_os_clipboard=true'
@@ -191,6 +193,7 @@ install_astro_nvim(){
 # Aliases in .zshrc
 add_aliases() {
     {
+    	echo "export TERM=tmux-256color"
         echo "export PATH=\$PATH:/usr/sbin/:$HOME/.local/bin"
         echo "alias sst='ss -nlptu'"
         echo "alias sss='sudo -s'"
