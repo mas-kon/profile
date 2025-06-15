@@ -3,7 +3,7 @@ set -e
 
 cd ~ || { echo "Home catalog not found."; exit 1; }
 
-Enable sudo without password
+# Enable sudo without password
 disable_sudo_password() {
     if [[ $(id -nG "$USER" | grep -qw "sudo") ]]; then
         echo "${USER} ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/${USER}
@@ -11,7 +11,7 @@ disable_sudo_password() {
 }
 
 
-Enable sudo without password
+# Enable sudo without password
 add_sudoers_entry() {
     if [[ ! -f /etc/sudoers.d/${USER} || "$UID" -ne 0 || ! $(id -nG "$USER" | grep -qw "sudo") || ! $(id -nG "$USER" | grep -qw "adm") ]]; then
         export C_USER=${USER}
