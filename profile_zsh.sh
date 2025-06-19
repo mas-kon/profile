@@ -23,7 +23,7 @@ add_sudoers_entry() {
 
 # Install package
 min_install() {
-    sudo apt update && sudo apt install -y tree mc bat zsh chrony curl vim htop git build-essential ca-certificates apt-transport-https sysstat ncdu python3-venv python3-pip python3-full
+    sudo apt update && sudo apt install -y tree mc bat zsh chrony curl vim htop git build-essential ca-certificates apt-transport-https sysstat ncdu python3-venv python3-pip python3-full jq
 }
 
 
