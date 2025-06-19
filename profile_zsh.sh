@@ -205,11 +205,11 @@ add_aliases() {
         echo "alias tt='tail -f'"
         echo "alias getip='wget -qO- eth0.me'"
         echo "alias psc='ps xawf -eo pid,user,cgroup,args'"
-
-        echo "alias lll='ls -lha'"
+	echo "alias lll='ls -lha'"
 
         echo "alias bench='wget -qO- bench.sh | bash'"  
-
+	echo "function ipa { curl -s https://ifconfig.co/json\?ip=$1 | jq 'del(.user_agent)' }"
+        
     } >> .zshrc
 
     if command -v duf &> /dev/null;then
