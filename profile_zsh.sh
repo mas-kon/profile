@@ -193,7 +193,6 @@ install_astro_nvim(){
 # Aliases in .zshrc
 add_aliases() {
     {
-    	echo "export TERM=tmux-256color"
         echo "export PATH=\$PATH:/usr/sbin/:$HOME/.local/bin"
         echo "alias sst='ss -nlptu'"
         echo "alias sss='sudo -s'"
