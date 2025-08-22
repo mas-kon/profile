@@ -172,24 +172,6 @@ install_uv(){
     fi
 }
 
-# Install my AstroNvim 
-install_astro_nvim(){
-    if [[ -d ~/.config/nvim ]]; then
-        mv ~/.config/nvim ~/.config/nvim.bak
-        mv ~/.local/share/nvim ~/.local/share/nvim.bak
-        mv ~/.local/state/nvim ~/.local/state/nvim.bak
-        mv ~/.cache/nvim ~/.cache/nvim.bak
-        echo "Old config NeoVim backuped."
-    else
-        echo "Directory ~/.config/nvim not found, continue."
-    fi
-    git clone https://github.com/mas-kon/profile /tmp/nvim
-    mkdir -p ~/.config/nvim
-    mv /tmp/nvim/nvim ~/.config/
-    rm -rf /tmp/nvim
-    echo "EDITOR=nvim" >> .zshrc
-}
-
 # Aliases in .zshrc
 add_aliases() {
     {
@@ -258,7 +240,7 @@ case $choice in
         ;;
     2)
         read -rp "Do you want to install UV? (y/N): " install_uv_choice
-	read -rp "Do you want to install docker? (y/N): " install_docker_choice
+		read -rp "Do you want to install docker? (y/N): " install_docker_choice
         read -rp "Do you want to disable_sudo_password? (y/N): " disable_sudo_password_choice
         read -rp "Do you want to add_sudoers_entry? (y/N): " add_sudoers_entry_choice
 	
@@ -288,7 +270,6 @@ case $choice in
             install_uv
         fi	
 	
-        install_astro_nvim
         add_aliases
         ;;
     *)
