@@ -32,8 +32,6 @@ extended_install() {
 
     sudo apt install -y fzf ripgrep gdu net-tools bash-completion duf dnsutils iotop tmux gpg parted fonts-powerline fd-find \
             libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
-    sudo apt install -y eza
-    sudo apt install -y exa 
     sudo apt install -y gping
     sudo apt install -y duf
     sudo apt install -y zsh-syntax-highlighting
@@ -186,7 +184,7 @@ add_aliases() {
         echo "alias tt='tail -f'"
         echo "alias getip='wget -qO- eth0.me'"
         echo "alias psc='ps xawf -eo pid,user,cgroup,args'"
-	echo "alias lll='ls -lha'"
+		echo "alias lll='ls -lha'"
 
         echo "alias bench='wget -qO- bench.sh | bash'"  
 	echo "function ipa { curl -s https://ifconfig.co/json\?ip=$1 | jq 'del(.user_agent)' }"
@@ -196,14 +194,6 @@ add_aliases() {
     if command -v duf &> /dev/null;then
         {
             echo "alias du='duf'"
-        } >> .zshrc
-    fi
-
-    if command -v exa &> /dev/null; then
-        {
-            echo "alias ls='exa'"
-            echo "alias lm='ls --long --all --sort=modified'"
-            echo "alias lmm='ls -lbHigUmuSa --sort=modified --time-style=long-iso'"
         } >> .zshrc
     fi
 
