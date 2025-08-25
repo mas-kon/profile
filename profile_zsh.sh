@@ -220,10 +220,18 @@ read -rp "Enter choice [1-2]: " choice
 
 case $choice in
     1)  
-        disable_sudo_password
-        add_sudoers_entry
+	    read -rp "Do you want to disable_sudo_password? (y/N): " disable_sudo_password_choice
+        read -rp "Do you want to add_sudoers_entry? (y/N): " add_sudoers_entry_choice
+	if [[ "$disable_sudo_password_choice" =~ ^[Yy]$ ]]; then
+            disable_sudo_password
+        fi
+
+ 	if [[ "$add_sudoers_entry_choice" =~ ^[Yy]$ ]]; then
+            add_sudoers_entry
+        fi
+		
         min_install
-        install_neovim
+#        install_neovim
         install_lazygit
         install_tmux
         install_oh_my_zsh
