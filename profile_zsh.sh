@@ -23,7 +23,7 @@ add_sudoers_entry() {
 
 # Install package
 min_install() {
-    sudo apt update && sudo apt install -y tree mc bat zsh chrony curl vim htop git build-essential ca-certificates apt-transport-https sysstat ncdu python3-venv python3-pip python3-full jq
+    sudo apt update && sudo apt install -y tree mc bat zsh chrony curl tmux vim htop git build-essential ca-certificates apt-transport-https sysstat ncdu python3-venv python3-pip python3-full jq
 	wget https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -O .vimrc
 }
 
@@ -31,7 +31,7 @@ min_install() {
 extended_install() {
     set +e
 
-    sudo apt install -y fzf ripgrep gdu net-tools bash-completion duf dnsutils iotop tmux gpg parted fonts-powerline fd-find \
+    sudo apt install -y fzf ripgrep gdu net-tools bash-completion duf dnsutils iotop gpg parted fonts-powerline fd-find \
             libssl-dev zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libncursesw5-dev xz-utils tk-dev libxml2-dev libxmlsec1-dev libffi-dev liblzma-dev
     sudo apt install -y gping
     sudo apt install -y duf
