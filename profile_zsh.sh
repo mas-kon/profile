@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 cd ~ || { echo "Home catalog not found."; exit 1; }
@@ -46,7 +46,6 @@ add_sudoers_entry() {
     if [[ ! -f /etc/sudoers.d/${USER} ]] && (id -nG "$USER" | grep -qw "sudo" || id -nG "$USER" | grep -qw "adm"); then
         echo "${USER} ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/${USER} > /dev/null
     fi
-    sudo systemctl restart systemd-timesyncd
 }
 
 
@@ -55,12 +54,12 @@ min_install() {
     sudo apt update && sudo apt install -y tree mc bat duf zsh chrony curl wget tmux vim htop git build-essential ca-certificates apt-transport-https sysstat ncdu python3-venv python3-pip python3-full jq ripgrep net-tools dnsutils iotop gpg parted fonts-powerline 
     curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -o .vimrc
     sudo apt install -y gping
-    sudo apt install -y zsh-syntax-highlighting
+    # sudo apt install -y zsh-syntax-highlighting
 }
 
 # Install lazygit
 install_lazygit() {
-    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | \grep -Po '"tag_name": *"v\K[^"]*')
+    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | /usr/bin/grep -Po '"tag_name": *"v\K[^"]*')
     curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz"
     tar xf lazygit.tar.gz lazygit
     sudo install lazygit -D -t /usr/local/bin/
