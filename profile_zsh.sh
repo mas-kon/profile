@@ -59,11 +59,41 @@ min_install() {
 
 # Install lazygit
 install_lazygit() {
+    echo "Installing lazygit..."
+
+    # Получаем последнюю версию Lazygit
     LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | /usr/bin/grep -Po '"tag_name": *"v\K[^"]*')
-    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz"
-    tar xf lazygit.tar.gz lazygit
-    sudo install lazygit -D -t /usr/local/bin/
-    rm lazygit*
+    if [[ -z "$LAZYGIT_VERSION" ]]; then
+        echo "Error: Could not retrieve latest Lazygit version." >&2
+        exit 1
+    fi
+
+    echo "Latest Lazygit version: $LAZYGIT_VERSION"
+
+    # Скачиваем архив с Lazygit
+    if ! curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz"; then
+        echo "Error: Failed to download Lazygit archive." >&2
+        exit 1
+    fi
+
+    # Распаковываем архив
+    if ! tar xf lazygit.tar.gz lazygit; then
+        echo "Error: Failed to extract Lazygit archive." >&2
+        rm -f lazygit.tar.gz  # Удаляем загруженный архив при ошибке
+        exit 1
+    fi
+
+    # Устанавливаем Lazygit
+    if ! sudo install lazygit -D -t /usr/local/bin/; then
+        echo "Error: Failed to install Lazygit." >&2
+        rm -f lazygit.tar.gz lazygit  # Очищаем временные файлы при ошибке
+        exit 1
+    fi
+
+    # Удаляем временные файлы
+    rm -f lazygit.tar.gz lazygit
+
+    echo "Lazygit installed."
 }
 
 
@@ -79,7 +109,7 @@ install_tmux() {
         echo 'set -g default-terminal "tmux-256color"'
         echo 'set -ga terminal-overrides ",xterm*:Tc"'
         echo 'tmux_conf_copy_to_os_clipboard=true'
-        echo 'set -g mouse on'
+        echo 'set -g mouse off'
         echo 'bind -n WheelUpPane if-shell -F -t = "#{mouse_any_flag}" "send-keys -M" "if -Ft= '\''#{pane_in_mode}'\'' '\''send-keys -M'\'' '\''copy-mode -e; send-keys -M'\''"'
         echo 'bind -n WheelDownPane if-shell -F -t = "#{mouse_any_flag}" "send-keys -M" "if -Ft= '\''#{pane_in_mode}'\'' '\''send-keys -M'\'' '\''copy-mode -e; send-keys -M'\''"'
         echo 'set -g @plugin "tmux-plugins/tmux-sessionist"'
@@ -96,22 +126,79 @@ install_tmux() {
 
 # Install bottom https://github.com/ClementTsang/bottom
 install_bottom() {
+    echo "Installing bottom..."
+
+    # Получаем последнюю версию Bottom
     BTM_VERSION=$(curl -s "https://api.github.com/repos/ClementTsang/bottom/releases/latest" | grep '"tag_name"' | cut -d '"' -f 4)
-    curl -Lo "/tmp/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb" "https://github.com/ClementTsang/bottom/releases/download/${BTM_VERSION}/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"
-    sudo dpkg -i "/tmp/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"
+    if [[ -z "$BTM_VERSION" ]]; then
+        echo "Error: Could not retrieve latest Bottom version." >&2
+        exit 1
+    fi
+
+    echo "Latest Bottom version: $BTM_VERSION"
+
+    # Скачиваем deb-пакет
+    if ! curl -Lo "/tmp/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb" "https://github.com/ClementTsang/bottom/releases/download/${BTM_VERSION}/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"; then
+        echo "Error: Failed to download Bottom package." >&2
+        exit 1
+    fi
+
+    # Устанавливаем пакет
+    if ! sudo dpkg -i "/tmp/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"; then
+        echo "Error: Failed to install Bottom package." >&2
+        rm "/tmp/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"  # Удаляем загруженный пакет при ошибке
+        exit 1
+    fi
+
+    # Удаляем временный файл
     rm "/tmp/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"
+
+    echo "Bottom installed."
 }
 
 install_lazyssh() {
+    echo "Installing lazyssh..."
+
     # Detect latest version
     LATEST_TAG=$(curl -fsSL https://api.github.com/repos/Adembc/lazyssh/releases/latest | jq -r .tag_name)
+    if [[ -z "$LATEST_TAG" ]]; then
+        echo "Error: Could not retrieve latest LazySSH version." >&2
+        exit 1
+    fi
+
+    echo "Latest LazySSH version: $LATEST_TAG"
+
     # Download the correct binary for your system
-    curl -LJO "https://github.com/Adembc/lazyssh/releases/download/${LATEST_TAG}/lazyssh_$(uname)_$(uname -m).tar.gz"
+    if ! curl -LJO "https://github.com/Adembc/lazyssh/releases/download/${LATEST_TAG}/lazyssh_$(uname)_$(uname -m).tar.gz"; then
+        echo "Error: Failed to download LazySSH archive." >&2
+        exit 1
+    fi
+
     # Extract the binary
-    tar -xzf lazyssh_$(uname)_$(uname -m).tar.gz
+    if ! tar -xzf lazyssh_$(uname)_$(uname -m).tar.gz; then
+        echo "Error: Failed to extract LazySSH archive." >&2
+        rm -f lazyssh_$(uname)_$(uname -m).tar.gz  # Удаляем загруженный архив при ошибке
+        exit 1
+    fi
+
+    # Check if the binary exists after extraction
+    if [[ ! -f lazyssh ]]; then
+        echo "Error: LazySSH binary not found after extraction." >&2
+        rm -f lazyssh_$(uname)_$(uname -m).tar.gz  # Очищаем временные файлы
+        exit 1
+    fi
+
     # Move to /usr/local/bin or another directory in your PATH
-    sudo mv lazyssh /usr/local/bin/
-    rm lazyssh_$(uname)_$(uname -m).tar.gz
+    if ! sudo mv lazyssh /usr/local/bin/; then
+        echo "Error: Failed to move LazySSH binary to /usr/local/bin/." >&2
+        rm -f lazyssh_$(uname)_$(uname -m).tar.gz  # Очищаем временные файлы
+        exit 1
+    fi
+
+    # Clean up the downloaded archive
+    rm -f lazyssh_$(uname)_$(uname -m).tar.gz
+
+    echo "LazySSH installed."
 }
 
 # Delete oh-my-zsh, if exits
@@ -147,31 +234,80 @@ install_oh_my_zsh() {
 
 # Install nvm - Node Version Manager
 install_nvm() {
-    NVM_V=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep "tag_name" | cut -d '"' -f 4)
-    if curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_V}/install.sh" | bash; then
-        echo "nvm installed."
-        {
-            echo 'export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"'
-            echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
-        } >> .zshrc
+    echo "Installing nvm..."
 
-        export NVM_DIR="$HOME/.nvm"
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        nvm install --lts
+    # Получаем последнюю версию NVM
+    NVM_V=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep "tag_name" | cut -d '"' -f 4)
+    if [[ -z "$NVM_V" ]]; then
+        echo "Error: Could not retrieve latest NVM version." >&2
+        exit 1
+    fi
+
+    echo "Latest NVM version: $NVM_V"
+
+    # Загружаем и устанавливаем NVM
+    if ! curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_V}/install.sh" | bash; then
+        echo "Error: Failed to download or execute NVM installation script." >&2
+        exit 1
+    fi
+
+    echo "nvm installed."
+
+    # Добавляем экспорт переменной среды в .zshrc
+    {
+        echo 'export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"'
+        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
+    } >> .zshrc
+
+    # Экспортируем переменную и устанавливаем LTS версию Node.js
+    export NVM_DIR="$HOME/.nvm"
+    if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+        \. "$NVM_DIR/nvm.sh"
+        if ! nvm install --lts; then
+            echo "Error: Failed to install Node.js LTS version." >&2
+            exit 1
+        fi
+        if ! nvm use --lts; then
+            echo "Error: Failed to use Node.js LTS version." >&2
+            exit 1
+        fi
     else
-        echo "Error install nvm." && exit 1
+        echo "Error: NVM script not found at $NVM_DIR/nvm.sh" >&2
+        exit 1
     fi
 }
 
 # Install UV
 install_uv(){
-    if curl -LsSf https://astral.sh/uv/install.sh | sh; then
-        echo 'eval "$(uv generate-shell-completion zsh)"' >> ~/.zshrc
-        echo 'eval "$(uvx --generate-shell-completion zsh)"' >> ~/.zshrc
-        echo "UV installed."
-    else
-        echo "Error install UV." && exit 1
+    echo "Installing UV..."
+
+    # Загружаем и устанавливаем UV
+    if ! curl -LsSf https://astral.sh/uv/install.sh | sh; then
+        echo "Error: Failed to download or execute UV installation script." >&2
+        exit 1
     fi
+
+    # Добавляем $HOME/.local/bin в PATH для текущей сессии
+    export PATH="$HOME/.local/bin:$PATH"
+
+    # Проверяем, что UV успешно установлен
+    if ! command -v uv &> /dev/null; then
+        echo "Error: UV was not installed correctly or is not in PATH." >&2
+        exit 1
+    fi
+
+    # Добавляем $HOME/.local/bin в PATH в .zshrc, если ещё не добавлен
+    if ! grep -q '$HOME/.local/bin' ~/.zshrc; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+    fi
+
+    # Добавляем автодополнение в .zshrc
+    {
+        echo 'eval "$(uv generate-shell-completion zsh)"'
+        echo 'eval "$(uvx --generate-shell-completion zsh)"'
+    } >> ~/.zshrc
+
+    echo "UV installed."
 }
 
 # Aliases in .zshrc
