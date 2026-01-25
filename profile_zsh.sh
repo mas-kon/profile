@@ -79,7 +79,7 @@ install_tmux() {
         echo 'set -g default-terminal "tmux-256color"'
         echo 'set -ga terminal-overrides ",xterm*:Tc"'
         echo 'tmux_conf_copy_to_os_clipboard=true'
-        echo 'set -g mouse on'
+        echo 'set -g mouse off'
         echo 'set -g @plugin "tmux-plugins/tmux-sessionist"'
         echo 'set -g @plugin "tmux-plugins/tmux-resurrect"'
         echo 'set -g @plugin "tmux-plugins/tmux-continuum"'
