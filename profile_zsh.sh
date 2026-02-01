@@ -338,7 +338,7 @@ add_aliases() {
         {
             echo "alias ls='eza --icons --group-directories-first'"
             echo "alias ll='eza -lh --icons --git --group-directories-first'"
-            echo "alias la='eza -lah --icons --git --group-directories-first'"
+            echo "alias lll='eza -lah --icons --git --group-directories-first'"
             echo "alias lt='eza --tree --icons --level=2'"
         } >> .zshrc
     else
