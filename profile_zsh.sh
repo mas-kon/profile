@@ -337,12 +337,14 @@ add_aliases() {
     if command -v eza &> /dev/null;then
         {
             echo "alias ls='eza --icons --group-directories-first'"
-            echo "alias ll='eza -lhg --icons --git --group-directories-first'"
-            echo "alias lll='eza -lahg --icons --git --group-directories-first'"
-            echo "alias lt='eza --tree --icons --level=2'"
+            echo "alias ll='eza -lhg --icons --group-directories-first'"
+            echo "alias lll='eza -lahg --icons --group-directories-first'"
+            echo "alias lt='eza --tree --icons --level=2' -a"
+            echo "alias llg='eza -lhg --icons --git --group-directories-first'"
         } >> .zshrc
     else
         {
+            echo "alias ll='ls -lh'" 
             echo "alias lll='ls -lha'"
         } >> .zshrc
     fi
