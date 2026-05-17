@@ -11,6 +11,33 @@ case "$ARCH" in
     *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
+# Validate GitHub API JSON response (guards against rate limits and API errors)
+validate_github_api_response() {
+    local response="$1"
+    local tool_name="$2"
+
+    if ! echo "$response" | jq empty 2>/dev/null; then
+        echo "Error: Invalid JSON response from GitHub API for $tool_name." >&2
+        return 1
+    fi
+
+    local api_message
+    api_message=$(echo "$response" | jq -r '.message // empty')
+    if [[ -n "$api_message" ]]; then
+        echo "Error: GitHub API error for $tool_name: $api_message" >&2
+        return 1
+    fi
+}
+
+# Check URL accessibility before downloading
+check_url_exists() {
+    local url="$1"
+    if ! curl -fsSL --head "$url" -o /dev/null 2>/dev/null; then
+        echo "Error: URL not accessible: $url" >&2
+        return 1
+    fi
+}
+
 # Bootstrap: install sudo and curl if missing (bare Debian)
 bootstrap_deps() {
     local missing=()
@@ -62,32 +89,63 @@ install_lazygit() {
     echo "Installing lazygit..."
 
     # Получаем последнюю версию Lazygit
-    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | /usr/bin/grep -Po '"tag_name": *"v\K[^"]*')
+    local LAZYGIT_RESPONSE
+    LAZYGIT_RESPONSE=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest")
+    validate_github_api_response "$LAZYGIT_RESPONSE" "Lazygit" || return 1
+    LAZYGIT_VERSION=$(echo "$LAZYGIT_RESPONSE" | /usr/bin/grep -Po '"tag_name": *"v\K[^"]*')
     if [[ -z "$LAZYGIT_VERSION" ]]; then
         echo "Error: Could not retrieve latest Lazygit version." >&2
-        exit 1
+        return 1
     fi
 
     echo "Latest Lazygit version: $LAZYGIT_VERSION"
 
+    # Проверяем установленную версию
+    if command -v lazygit &>/dev/null; then
+        CURRENT_VERSION=$(lazygit --version | grep -oP 'version=\K[^,]+')
+        if [[ "$CURRENT_VERSION" == "$LAZYGIT_VERSION" ]]; then
+            echo "Lazygit $CURRENT_VERSION already installed, skipping."
+            return
+        fi
+    fi
+
+    # Проверяем доступность URL
+    local LAZYGIT_URL="https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz"
+    check_url_exists "$LAZYGIT_URL" || return 1
+
     # Скачиваем архив с Lazygit
-    if ! curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz"; then
+    if ! curl -Lo lazygit.tar.gz "$LAZYGIT_URL"; then
         echo "Error: Failed to download Lazygit archive." >&2
-        exit 1
+        return 1
+    fi
+
+    # Проверяем контрольную сумму
+    local LAZYGIT_CHECKSUM_URL="https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/checksums.txt"
+    if curl -fsSL -o lazygit_checksums.txt "$LAZYGIT_CHECKSUM_URL" 2>/dev/null; then
+        if grep "lazygit_${LAZYGIT_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz" lazygit_checksums.txt | sha256sum --check --status 2>/dev/null; then
+            echo "Lazygit checksum verified."
+        else
+            echo "Error: Checksum verification failed for Lazygit." >&2
+            rm -f lazygit.tar.gz lazygit_checksums.txt
+            return 1
+        fi
+        rm -f lazygit_checksums.txt
+    else
+        echo "Warning: Could not download checksums file, skipping verification." >&2
     fi
 
     # Распаковываем архив
     if ! tar xf lazygit.tar.gz lazygit; then
         echo "Error: Failed to extract Lazygit archive." >&2
         rm -f lazygit.tar.gz  # Удаляем загруженный архив при ошибке
-        exit 1
+        return 1
     fi
 
     # Устанавливаем Lazygit
     if ! sudo install lazygit -D -t /usr/local/bin/; then
         echo "Error: Failed to install Lazygit." >&2
         rm -f lazygit.tar.gz lazygit  # Очищаем временные файлы при ошибке
-        exit 1
+        return 1
     fi
 
     # Удаляем временные файлы
@@ -105,6 +163,10 @@ install_tmux() {
     git clone --depth 1 --single-branch https://github.com/gpakosz/.tmux.git
     ln -s -f .tmux/.tmux.conf
     cp .tmux/.tmux.conf.local .
+    if grep -q 'tmux-plugins/tmux-sessionist' ~/.tmux.conf.local 2>/dev/null; then
+        echo "Tmux config already configured, skipping."
+        return
+    fi
     {
         echo 'set -g default-terminal "tmux-256color"'
         echo 'set -ga terminal-overrides ",xterm*:Tc"'
@@ -129,25 +191,41 @@ install_bottom() {
     echo "Installing bottom..."
 
     # Получаем последнюю версию Bottom
-    BTM_VERSION=$(curl -s "https://api.github.com/repos/ClementTsang/bottom/releases/latest" | grep '"tag_name"' | cut -d '"' -f 4)
+    local BTM_RESPONSE
+    BTM_RESPONSE=$(curl -s "https://api.github.com/repos/ClementTsang/bottom/releases/latest")
+    validate_github_api_response "$BTM_RESPONSE" "Bottom" || return 1
+    BTM_VERSION=$(echo "$BTM_RESPONSE" | grep '"tag_name"' | cut -d '"' -f 4)
     if [[ -z "$BTM_VERSION" ]]; then
         echo "Error: Could not retrieve latest Bottom version." >&2
-        exit 1
+        return 1
     fi
 
     echo "Latest Bottom version: $BTM_VERSION"
 
+    # Проверяем установленную версию
+    if command -v btm &>/dev/null; then
+        CURRENT_VERSION=$(btm --version | awk '{print $2}')
+        if [[ "$CURRENT_VERSION" == "$BTM_VERSION" ]]; then
+            echo "Bottom $CURRENT_VERSION already installed, skipping."
+            return
+        fi
+    fi
+
+    # Проверяем доступность URL
+    local BTM_URL="https://github.com/ClementTsang/bottom/releases/download/${BTM_VERSION}/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"
+    check_url_exists "$BTM_URL" || return 1
+
     # Скачиваем deb-пакет
-    if ! curl -Lo "/tmp/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb" "https://github.com/ClementTsang/bottom/releases/download/${BTM_VERSION}/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"; then
+    if ! curl -Lo "/tmp/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb" "$BTM_URL"; then
         echo "Error: Failed to download Bottom package." >&2
-        exit 1
+        return 1
     fi
 
     # Устанавливаем пакет
     if ! sudo dpkg -i "/tmp/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"; then
         echo "Error: Failed to install Bottom package." >&2
         rm "/tmp/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"  # Удаляем загруженный пакет при ошибке
-        exit 1
+        return 1
     fi
 
     # Удаляем временный файл
@@ -160,43 +238,59 @@ install_lazyssh() {
     echo "Installing lazyssh..."
 
     # Detect latest version
-    LATEST_TAG=$(curl -fsSL https://api.github.com/repos/Adembc/lazyssh/releases/latest | jq -r .tag_name)
+    local LAZYSSH_RESPONSE
+    LAZYSSH_RESPONSE=$(curl -fsSL https://api.github.com/repos/Adembc/lazyssh/releases/latest)
+    validate_github_api_response "$LAZYSSH_RESPONSE" "LazySSH" || return 1
+    LATEST_TAG=$(echo "$LAZYSSH_RESPONSE" | jq -r .tag_name)
     if [[ -z "$LATEST_TAG" ]]; then
         echo "Error: Could not retrieve latest LazySSH version." >&2
-        exit 1
+        return 1
     fi
 
     echo "Latest LazySSH version: $LATEST_TAG"
 
+    # Проверяем установленную версию
+    if command -v lazyssh &>/dev/null; then
+        CURRENT_VERSION=$(lazyssh --version 2>/dev/null | awk '{print $NF}')
+        if [[ "$CURRENT_VERSION" == "$LATEST_TAG" ]]; then
+            echo "LazySSH $CURRENT_VERSION already installed, skipping."
+            return
+        fi
+    fi
+
+    # Проверяем доступность URL
+    local LAZYSSH_URL="https://github.com/Adembc/lazyssh/releases/download/${LATEST_TAG}/lazyssh_$(uname)_$(uname -m).tar.gz"
+    check_url_exists "$LAZYSSH_URL" || return 1
+
     # Download the correct binary for your system
-    if ! curl -LJO "https://github.com/Adembc/lazyssh/releases/download/${LATEST_TAG}/lazyssh_$(uname)_$(uname -m).tar.gz"; then
+    if ! curl -LJO "$LAZYSSH_URL"; then
         echo "Error: Failed to download LazySSH archive." >&2
-        exit 1
+        return 1
     fi
 
     # Extract the binary
-    if ! tar -xzf lazyssh_$(uname)_$(uname -m).tar.gz; then
+    if ! tar -xzf "lazyssh_$(uname)_$(uname -m).tar.gz"; then
         echo "Error: Failed to extract LazySSH archive." >&2
-        rm -f lazyssh_$(uname)_$(uname -m).tar.gz  # Удаляем загруженный архив при ошибке
-        exit 1
+        rm -f "lazyssh_$(uname)_$(uname -m).tar.gz"  # Удаляем загруженный архив при ошибке
+        return 1
     fi
 
     # Check if the binary exists after extraction
     if [[ ! -f lazyssh ]]; then
         echo "Error: LazySSH binary not found after extraction." >&2
-        rm -f lazyssh_$(uname)_$(uname -m).tar.gz  # Очищаем временные файлы
-        exit 1
+        rm -f "lazyssh_$(uname)_$(uname -m).tar.gz"  # Очищаем временные файлы
+        return 1
     fi
 
     # Move to /usr/local/bin or another directory in your PATH
     if ! sudo mv lazyssh /usr/local/bin/; then
         echo "Error: Failed to move LazySSH binary to /usr/local/bin/." >&2
-        rm -f lazyssh_$(uname)_$(uname -m).tar.gz  # Очищаем временные файлы
-        exit 1
+        rm -f "lazyssh_$(uname)_$(uname -m).tar.gz"  # Очищаем временные файлы
+        return 1
     fi
 
     # Clean up the downloaded archive
-    rm -f lazyssh_$(uname)_$(uname -m).tar.gz
+    rm -f "lazyssh_$(uname)_$(uname -m).tar.gz"
 
     echo "LazySSH installed."
 }
@@ -214,19 +308,27 @@ install_oh_my_zsh() {
     # Install oh-my-zsh
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-    # Clone zsh
+    # Clone zsh plugins
     mkdir -p ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins
-    git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
-    git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+    if [[ ! -d "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting" ]]; then
+        git clone --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting.git ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+    else
+        echo "zsh-syntax-highlighting already installed, skipping."
+    fi
+    if [[ ! -d "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions" ]]; then
+        git clone --depth 1 https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+    else
+        echo "zsh-autosuggestions already installed, skipping."
+    fi
 
     # Install .zshrc
     if [[ -f .zshrc ]]; then
         sed -i 's/robbyrussell/bira/' .zshrc
-        sed -i 's/plugins=(.*)$/plugins=(z git zsh-syntax-highlighting jira zsh-autosuggestions aliases poetry battery zsh-autosuggestions terraform aws docker docker-compose kubectl)/' .zshrc
+        sed -i 's/plugins=(.*)/plugins=(z git zsh-syntax-highlighting jira zsh-autosuggestions aliases poetry battery terraform aws docker docker-compose kubectl)/' .zshrc
     else
-        echo ".zshrc not found." && exit 1
+        echo ".zshrc not found." && return 1
     fi
-    echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> ~/.zshrc
+    # echo "source ~/.oh-my-zsh/custom/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" >> ~/.zshrc
     # Change shell
     sudo chsh -s "$(which zsh)" $USER
 }
@@ -237,10 +339,13 @@ install_nvm() {
     echo "Installing nvm..."
 
     # Получаем последнюю версию NVM
-    NVM_V=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep "tag_name" | cut -d '"' -f 4)
+    local NVM_RESPONSE
+    NVM_RESPONSE=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest)
+    validate_github_api_response "$NVM_RESPONSE" "NVM" || return 1
+    NVM_V=$(echo "$NVM_RESPONSE" | grep "tag_name" | cut -d '"' -f 4)
     if [[ -z "$NVM_V" ]]; then
         echo "Error: Could not retrieve latest NVM version." >&2
-        exit 1
+        return 1
     fi
 
     echo "Latest NVM version: $NVM_V"
@@ -248,7 +353,7 @@ install_nvm() {
     # Загружаем и устанавливаем NVM
     if ! curl -fsSL "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_V}/install.sh" | bash; then
         echo "Error: Failed to download or execute NVM installation script." >&2
-        exit 1
+        return 1
     fi
 
     echo "nvm installed."
@@ -265,15 +370,15 @@ install_nvm() {
         \. "$NVM_DIR/nvm.sh"
         if ! nvm install --lts; then
             echo "Error: Failed to install Node.js LTS version." >&2
-            exit 1
+            return 1
         fi
         if ! nvm use --lts; then
             echo "Error: Failed to use Node.js LTS version." >&2
-            exit 1
+            return 1
         fi
     else
         echo "Error: NVM script not found at $NVM_DIR/nvm.sh" >&2
-        exit 1
+        return 1
     fi
 }
 
@@ -284,7 +389,7 @@ install_uv(){
     # Загружаем и устанавливаем UV
     if ! curl -LsSf https://astral.sh/uv/install.sh | sh; then
         echo "Error: Failed to download or execute UV installation script." >&2
-        exit 1
+        return 1
     fi
 
     # Добавляем $HOME/.local/bin в PATH для текущей сессии
@@ -293,7 +398,7 @@ install_uv(){
     # Проверяем, что UV успешно установлен
     if ! command -v uv &> /dev/null; then
         echo "Error: UV was not installed correctly or is not in PATH." >&2
-        exit 1
+        return 1
     fi
 
     # Добавляем $HOME/.local/bin в PATH в .zshrc, если ещё не добавлен
@@ -312,6 +417,10 @@ install_uv(){
 
 # Aliases in .zshrc
 add_aliases() {
+    if grep -q 'alias sst=' ~/.zshrc 2>/dev/null; then
+        echo "Aliases already added, skipping."
+        return
+    fi
     {
         echo "export PATH=\$PATH:/usr/sbin/:$HOME/.local/bin"
         echo "alias sst='ss -nlptu'"
