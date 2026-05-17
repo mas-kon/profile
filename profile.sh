@@ -602,13 +602,16 @@ install_nvm() {
 
     export NVM_DIR="$HOME/.nvm"
     if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+        set +u  # nvm.sh uses unbound variables internally
         # shellcheck source=/dev/null
         \. "$NVM_DIR/nvm.sh"
         if ! nvm install --lts; then
+            set -u
             log_error "Failed to install Node.js LTS."
             return 1
         fi
         nvm use --lts
+        set -u
     else
         log_error "NVM script not found at $NVM_DIR/nvm.sh"
         return 1
