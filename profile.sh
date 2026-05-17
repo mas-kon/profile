@@ -574,19 +574,18 @@ install_nvim_config() {
     fi
 
     # tree-sitter-cli is required by the nvim config.
-    # Source nvm.sh explicitly — npm may not be in PATH yet in the current session.
-    if ! command -v npm &>/dev/null && [[ -s "$HOME/.nvm/nvm.sh" ]]; then
-        set +u
-        # shellcheck source=/dev/null
-        source "$HOME/.nvm/nvm.sh"
-        set -u
-    fi
-
-    if command -v npm &>/dev/null; then
-        log "Installing tree-sitter-cli..."
-        npm install -g tree-sitter-cli
+    # Use whereis to locate npm even if nvm is not sourced in the current session.
+    local npm_bin
+    npm_bin=$(whereis npm 2>/dev/null | awk '{print $2}')
+    if [[ -n "$npm_bin" && -x "$npm_bin" ]]; then
+        log "Installing tree-sitter-cli via $npm_bin..."
+        if "$npm_bin" install -g tree-sitter-cli; then
+            log "tree-sitter-cli installed."
+        else
+            log_error "tree-sitter-cli installation failed."
+        fi
     else
-        log "Warning: npm not available, skipping tree-sitter-cli. Run 'npm install -g tree-sitter-cli' after login."
+        log "Warning: npm not found, skipping tree-sitter-cli. Run 'npm install -g tree-sitter-cli' after login."
     fi
 }
 
