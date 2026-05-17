@@ -570,7 +570,23 @@ install_nvim_config() {
             log_error "Failed to clone Neovim config."
             return 1
         fi
-        log "Neovim config installed at ~/.config/nvim"
+        log "Neovim config cloned to ~/.config/nvim"
+    fi
+
+    # tree-sitter-cli is required by the nvim config.
+    # Source nvm.sh explicitly — npm may not be in PATH yet in the current session.
+    if ! command -v npm &>/dev/null && [[ -s "$HOME/.nvm/nvm.sh" ]]; then
+        set +u
+        # shellcheck source=/dev/null
+        source "$HOME/.nvm/nvm.sh"
+        set -u
+    fi
+
+    if command -v npm &>/dev/null; then
+        log "Installing tree-sitter-cli..."
+        npm install -g tree-sitter-cli
+    else
+        log "Warning: npm not available, skipping tree-sitter-cli. Run 'npm install -g tree-sitter-cli' after login."
     fi
 }
 
@@ -682,6 +698,14 @@ add_aliases() {
 
     if command -v duf &>/dev/null; then
         echo "alias du='duf'" >> ~/.zshrc
+    fi
+
+    if command -v lazygit &>/dev/null; then
+        echo "alias lg='lazygit'" >> ~/.zshrc
+    fi
+
+    if command -v lazyssh &>/dev/null; then
+        echo "alias lss='lazyssh'" >> ~/.zshrc
     fi
 
     # Detect actual bat binary name (batcat on Debian, bat on Fedora/RHEL)
