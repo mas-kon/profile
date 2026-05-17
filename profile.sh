@@ -266,7 +266,10 @@ install_lazygit() {
 
     local checksum_url="https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/checksums.txt"
     if curl -fsSL -o /tmp/lazygit_checksums.txt "$checksum_url" 2>/dev/null; then
-        if grep "lazygit_${LAZYGIT_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz" /tmp/lazygit_checksums.txt | (cd /tmp && sha256sum --check --status) 2>/dev/null; then
+        local expected_hash actual_hash
+        expected_hash=$(grep "lazygit_${LAZYGIT_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz" /tmp/lazygit_checksums.txt | awk '{print $1}')
+        actual_hash=$(sha256sum /tmp/lazygit.tar.gz | awk '{print $1}')
+        if [[ -n "$expected_hash" && "$expected_hash" == "$actual_hash" ]]; then
             log "Lazygit checksum verified."
         else
             log_error "Checksum verification failed for Lazygit."
