@@ -435,7 +435,7 @@ install_oh_my_zsh() {
 
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 
-    local plugins_dir="${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins"
+    local plugins_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins"
     mkdir -p "$plugins_dir"
 
     if [[ ! -d "$plugins_dir/zsh-syntax-highlighting" ]]; then
@@ -831,18 +831,18 @@ main() {
         exit 0
     fi
 
-    component_enabled "1" && add_sudoers_entry
-    component_enabled "2" && install_base_packages
-    component_enabled "3" && install_oh_my_zsh
-    component_enabled "4" && install_tmux
-    component_enabled "5" && install_lazygit
-    component_enabled "6" && install_bottom
-    component_enabled "7" && install_lazyssh
-    component_enabled "8" && install_nvim
-    component_enabled "9" && install_nvim_config
-    component_enabled "A" && install_nvm
-    component_enabled "B" && install_uv
-    component_enabled "C" && add_aliases
+    if component_enabled "1"; then add_sudoers_entry    || log_error "sudoers: failed, continuing."; fi
+    if component_enabled "2"; then install_base_packages || log_error "base packages: failed, continuing."; fi
+    if component_enabled "3"; then install_oh_my_zsh    || log_error "oh-my-zsh: failed, continuing."; fi
+    if component_enabled "4"; then install_tmux          || log_error "tmux: failed, continuing."; fi
+    if component_enabled "5"; then install_lazygit       || log_error "lazygit: failed, continuing."; fi
+    if component_enabled "6"; then install_bottom        || log_error "bottom: failed, continuing."; fi
+    if component_enabled "7"; then install_lazyssh       || log_error "lazyssh: failed, continuing."; fi
+    if component_enabled "8"; then install_nvim          || log_error "nvim: failed, continuing."; fi
+    if component_enabled "9"; then install_nvim_config   || log_error "nvim config: failed, continuing."; fi
+    if component_enabled "A"; then install_nvm           || log_error "nvm: failed, continuing."; fi
+    if component_enabled "B"; then install_uv            || log_error "uv: failed, continuing."; fi
+    if component_enabled "C"; then add_aliases           || log_error "aliases: failed, continuing."; fi
 
     log "All done. Log saved to $LOG_FILE"
 }
