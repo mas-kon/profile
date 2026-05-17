@@ -78,7 +78,7 @@ add_sudoers_entry() {
 
 # Install package
 min_install() {
-    sudo apt update && sudo apt install -y tree mc bat duf zsh chrony curl wget tmux vim htop git build-essential ca-certificates apt-transport-https sysstat ncdu python3-venv python3-pip python3-full jq ripgrep net-tools dnsutils iotop gpg parted fonts-powerline 
+    sudo apt update && sudo apt install -y tree mc bat duf eza zsh chrony curl wget tmux vim htop git build-essential ca-certificates apt-transport-https sysstat ncdu python3-venv python3-pip python3-full jq ripgrep net-tools dnsutils iotop gpg parted fonts-powerline 
     curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -o .vimrc
     sudo apt install -y gping
     # sudo apt install -y zsh-syntax-highlighting
@@ -433,7 +433,6 @@ add_aliases() {
         echo "alias tt='tail -f'"
         echo "alias getip='curl -fsSL eth0.me'"
         echo "alias psc='ps xawf -eo pid,user,cgroup,args'"
-        echo "alias lll='ls -lha'"
         echo "alias bench='curl -fsSL bench.sh | bash'"
         echo "function ipa { curl -s https://ifconfig.co/json\?ip=\$1 | jq 'del(.user_agent)' }"
     } >> .zshrc
@@ -441,6 +440,22 @@ add_aliases() {
     if command -v duf &> /dev/null;then
         {
             echo "alias du='duf'"
+        } >> .zshrc
+    fi
+
+    if command -v eza &> /dev/null;then
+        {
+            echo "alias ls='eza  --group-directories-first'"
+            echo "alias ll='eza -lhg --group-directories-first'"
+            echo "alias lll='eza -lahg --group-directories-first'"
+            echo "alias lt='eza --tree --level=2'"
+            echo "alias llt='eza --tree --level=2 -a'"
+            echo "alias llg='eza -lhg --icons --git --group-directories-first'"
+        } >> .zshrc
+    else
+        {
+            echo "alias ll='ls -lh'" 
+            echo "alias lll='ls -lha'"
         } >> .zshrc
     fi
 
