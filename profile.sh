@@ -69,7 +69,7 @@ pkg_name() {
     case "$DISTRO_FAMILY" in
         debian)
             case "$canonical" in
-                bat)            echo "batcat" ;;
+                bat)            echo "bat" ;;
                 python3)        echo "python3-full python3-venv python3-pip" ;;
                 dns-tools)      echo "dnsutils" ;;
                 dev-tools)      echo "build-essential" ;;
@@ -714,7 +714,7 @@ declare -a COMPONENT_NAMES=(
     "uv (Python)"
     "aliases"
 )
-declare -a COMPONENT_DEFAULTS=(N Y Y Y Y Y Y Y Y N N Y)
+declare -a COMPONENT_DEFAULTS=(N Y Y Y Y Y Y Y Y Y Y Y)
 declare -a COMPONENT_STATE=()
 
 show_interactive_menu() {
