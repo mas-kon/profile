@@ -860,11 +860,21 @@ main() {
     fi
 
     # Authenticate sudo once and cache credentials for the entire session.
+    # If user has no sudo access, try to grant it via su (requires root password).
     if [[ "$EUID" -ne 0 ]]; then
         log "Authenticating sudo (enter your password once)..."
-        if ! sudo -v; then
-            log_error "sudo authentication failed. Run as root or add yourself to the sudo group first."
-            exit 1
+        if ! sudo -v 2>/dev/null; then
+            log "User $USER has no sudo access. Trying to grant it via su (enter root password)..."
+            if su -c "usermod -aG sudo $USER && echo '${USER} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${USER}"; then
+                log "Granted sudo access to $USER. Re-authenticating..."
+                if ! sudo -v; then
+                    log_error "sudo still not working after granting access. Try logging out and back in."
+                    exit 1
+                fi
+            else
+                log_error "Failed to grant sudo via su. Run as root or ask an administrator."
+                exit 1
+            fi
         fi
     fi
 
