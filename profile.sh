@@ -859,6 +859,15 @@ main() {
         exit 0
     fi
 
+    # Authenticate sudo once and cache credentials for the entire session.
+    if [[ "$EUID" -ne 0 ]]; then
+        log "Authenticating sudo (enter your password once)..."
+        if ! sudo -v; then
+            log_error "sudo authentication failed. Run as root or add yourself to the sudo group first."
+            exit 1
+        fi
+    fi
+
     if component_enabled "1"; then add_sudoers_entry    || log_error "sudoers: failed, continuing."; fi
     if component_enabled "2"; then install_base_packages || log_error "base packages: failed, continuing."; fi
     if component_enabled "3"; then install_oh_my_zsh    || log_error "oh-my-zsh: failed, continuing."; fi
