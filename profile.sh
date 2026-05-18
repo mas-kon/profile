@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ─── Constants ────────────────────────────────────────────────────────────────
+# === Constants ================================================================
 
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="$HOME/profile_install_${TIMESTAMP}.log"
 
-# ─── Architecture detection ───────────────────────────────────────────────────
+# === Architecture detection ===================================================
 
 ARCH=$(uname -m)
 case "$ARCH" in
@@ -15,11 +15,12 @@ case "$ARCH" in
     *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
-# ─── Distro abstraction ───────────────────────────────────────────────────────
+# === Distro abstraction =======================================================
 
 DISTRO_FAMILY=""
 PKG_UPDATE=""
 PKG_INSTALL=""
+NVM_NODE_VER=""  # populated by install_nvm(), consumed by install_nvim_config()
 
 detect_distro() {
     if [[ ! -f /etc/os-release ]]; then
@@ -98,7 +99,7 @@ install_packages() {
     $PKG_INSTALL "${packages[@]}"
 }
 
-# ─── Logging ──────────────────────────────────────────────────────────────────
+# === Logging ==================================================================
 
 log() {
     local msg="[$(date '+%H:%M:%S')] $*"
@@ -110,7 +111,7 @@ log_error() {
     echo "$msg" | tee -a "$LOG_FILE" >&2
 }
 
-# ─── Utilities ────────────────────────────────────────────────────────────────
+# === Utilities ================================================================
 
 validate_github_api_response() {
     local response="$1"
@@ -150,7 +151,7 @@ backup_config() {
     _BACKED_UP[$target]=1
 }
 
-# ─── Bootstrap ────────────────────────────────────────────────────────────────
+# === Bootstrap ================================================================
 
 bootstrap_deps() {
     local missing=()
@@ -192,7 +193,7 @@ add_sudoers_entry() {
     fi
 }
 
-# ─── Base packages ────────────────────────────────────────────────────────────
+# === Base packages ============================================================
 
 install_base_packages() {
     log "Installing base packages..."
@@ -230,7 +231,7 @@ install_base_packages() {
     log "Base packages installed."
 }
 
-# ─── Lazygit ──────────────────────────────────────────────────────────────────
+# === Lazygit ==================================================================
 
 install_lazygit() {
     log "Installing lazygit..."
@@ -299,7 +300,7 @@ install_lazygit() {
     log "Lazygit installed."
 }
 
-# ─── Bottom ───────────────────────────────────────────────────────────────────
+# === Bottom ===================================================================
 
 install_bottom() {
     log "Installing bottom..."
@@ -368,7 +369,7 @@ install_bottom() {
     log "Bottom installed."
 }
 
-# ─── LazySSH ──────────────────────────────────────────────────────────────────
+# === LazySSH ==================================================================
 
 install_lazyssh() {
     log "Installing lazyssh..."
@@ -425,7 +426,7 @@ install_lazyssh() {
     log "LazySSH installed."
 }
 
-# ─── Oh-My-Zsh ────────────────────────────────────────────────────────────────
+# === Oh-My-Zsh ================================================================
 
 install_oh_my_zsh() {
     log "Installing Oh-My-Zsh..."
@@ -465,7 +466,7 @@ install_oh_my_zsh() {
     log "Oh-My-Zsh installed."
 }
 
-# ─── Tmux ─────────────────────────────────────────────────────────────────────
+# === Tmux =====================================================================
 
 install_tmux() {
     log "Installing tmux configuration..."
@@ -507,7 +508,7 @@ install_tmux() {
     log "Tmux configuration installed."
 }
 
-# ─── Neovim ───────────────────────────────────────────────────────────────────
+# === Neovim ===================================================================
 
 install_nvim() {
     log "Installing Neovim..."
@@ -574,9 +575,15 @@ install_nvim_config() {
     fi
 
     # tree-sitter-cli is required by the nvim config.
-    # Use whereis to locate npm even if nvm is not sourced in the current session.
-    local npm_bin
-    npm_bin=$(whereis npm 2>/dev/null | awk '{print $2}')
+    # Build npm path from NVM_NODE_VER (set during install_nvm) or scan ~/.nvm as fallback.
+    local npm_bin=""
+    if [[ -n "$NVM_NODE_VER" ]]; then
+        npm_bin="$HOME/.nvm/versions/node/${NVM_NODE_VER}/bin/npm"
+    else
+        # Fallback: find the first npm binary under ~/.nvm (previous nvm install)
+        npm_bin=$(find "$HOME/.nvm/versions/node" -name npm -type f 2>/dev/null | sort -V | tail -1)
+    fi
+
     if [[ -n "$npm_bin" && -x "$npm_bin" ]]; then
         log "Installing tree-sitter-cli via $npm_bin..."
         if "$npm_bin" install -g tree-sitter-cli; then
@@ -589,7 +596,7 @@ install_nvim_config() {
     fi
 }
 
-# ─── NVM ──────────────────────────────────────────────────────────────────────
+# === NVM ======================================================================
 
 install_nvm() {
     log "Installing nvm..."
@@ -628,6 +635,7 @@ install_nvm() {
             return 1
         fi
         nvm use --lts
+        NVM_NODE_VER=$(node --version 2>/dev/null || true)
         set -u
     else
         log_error "NVM script not found at $NVM_DIR/nvm.sh"
@@ -637,7 +645,7 @@ install_nvm() {
     log "nvm installed."
 }
 
-# ─── UV ───────────────────────────────────────────────────────────────────────
+# === UV =======================================================================
 
 install_uv() {
     log "Installing UV..."
@@ -668,7 +676,7 @@ install_uv() {
     log "UV installed."
 }
 
-# ─── Aliases ──────────────────────────────────────────────────────────────────
+# === Aliases ==================================================================
 
 add_aliases() {
     if grep -q 'alias sst=' ~/.zshrc 2>/dev/null; then
@@ -728,7 +736,7 @@ add_aliases() {
     log "Aliases added."
 }
 
-# ─── Interactive menu ─────────────────────────────────────────────────────────
+# === Interactive menu =========================================================
 
 declare -a COMPONENT_KEYS=(1 2 3 4 5 6 7 8 9 A B C)
 declare -a COMPONENT_NAMES=(
@@ -763,16 +771,16 @@ show_interactive_menu() {
 
     while true; do
         echo ""
-        echo "┌─────────────────────────────────────────────┐"
+        echo "┌=============================================┐"
         echo "│          profile.sh — component selection   │"
-        echo "├────┬──────────────────────────────────┬─────┤"
+        echo "├====┬==================================┬=====┤"
         for i in "${!COMPONENT_KEYS[@]}"; do
             local state="${COMPONENT_STATE[$i]}"
             local mark="[ ]"
             [[ "$state" == "Y" ]] && mark="[x]"
             printf "│ %s  │ %-32s │ %s │\n" "${COMPONENT_KEYS[$i]}" "${COMPONENT_NAMES[$i]}" "$mark"
         done
-        echo "└────┴──────────────────────────────────┴─────┘"
+        echo "└====┴==================================┴=====┘"
         echo ""
         printf "Toggle (1-9,A-C), ENTER to confirm, q to quit: "
         read -r input
@@ -808,7 +816,7 @@ component_enabled() {
     return 1
 }
 
-# ─── CLI argument parsing ─────────────────────────────────────────────────────
+# === CLI argument parsing =====================================================
 
 MODE="interactive"
 DRY_RUN=0
@@ -837,7 +845,7 @@ parse_args() {
     done
 }
 
-# ─── Main ─────────────────────────────────────────────────────────────────────
+# === Main =====================================================================
 
 main() {
     parse_args "$@"
