@@ -776,7 +776,7 @@ show_interactive_menu() {
     # Apply mode overrides before showing menu
     case "${MODE:-interactive}" in
         minimal)
-            COMPONENT_STATE=(N Y N N N N N N N N N Y)
+            COMPONENT_STATE=(N Y Y N N N N N N N N Y)
             return ;;
         full)
             COMPONENT_STATE=(Y Y Y Y Y Y Y Y Y Y Y Y)
