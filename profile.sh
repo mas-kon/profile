@@ -198,6 +198,14 @@ add_sudoers_entry() {
 install_base_packages() {
     log "Installing base packages..."
 
+    # Enable EPEL before resolving packages — many tools (zsh, bat, ripgrep, mc, ncdu) live there on RHEL
+    if [[ "$DISTRO_FAMILY" == "fedora" || "$DISTRO_FAMILY" == "rhel" ]]; then
+        log "Enabling EPEL repository..."
+        sudo dnf install -y epel-release || log "Warning: epel-release not available (may already be enabled)."
+        sudo dnf install -y epel-next-release 2>/dev/null || true
+        $PKG_UPDATE
+    fi
+
     local canonical_packages=(
         tree mc bat zsh curl wget tmux vim htop git
         chrony sysstat ncdu jq ripgrep net-tools
@@ -212,14 +220,15 @@ install_base_packages() {
         [[ -n "$resolved_name" ]] && resolved+=($resolved_name)
     done
 
-    $PKG_UPDATE
+    if [[ "$DISTRO_FAMILY" == "debian" ]]; then
+        $PKG_UPDATE
+    fi
     install_packages "${resolved[@]}"
 
     # Dev tools group install (RPM only — apt uses build-essential above)
     if [[ "$DISTRO_FAMILY" == "fedora" || "$DISTRO_FAMILY" == "rhel" ]]; then
         log "Installing Development Tools group..."
         sudo dnf groupinstall -y "Development Tools"
-        # Extra packages available on Fedora/RHEL but not in the canonical list
         sudo dnf install -y gping || log "Warning: gping not available, skipping."
     fi
 
@@ -430,6 +439,11 @@ install_lazyssh() {
 
 install_oh_my_zsh() {
     log "Installing Oh-My-Zsh..."
+
+    if ! command -v zsh &>/dev/null; then
+        log_error "zsh is not installed. Cannot install Oh-My-Zsh. Install zsh first (check EPEL is enabled on RHEL/Rocky)."
+        return 1
+    fi
 
     if [[ -d ~/.oh-my-zsh ]]; then
         rm -rf ~/.oh-my-zsh
@@ -668,10 +682,12 @@ install_uv() {
         echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
     fi
 
-    {
-        echo 'eval "$(uv generate-shell-completion zsh)"'
-        echo 'eval "$(uvx --generate-shell-completion zsh)"'
-    } >> ~/.zshrc
+    if ! grep -q 'uv generate-shell-completion' ~/.zshrc; then
+        {
+            echo 'eval "$(uv generate-shell-completion zsh)"'
+            echo 'eval "$(uvx --generate-shell-completion zsh)"'
+        } >> ~/.zshrc
+    fi
 
     log "UV installed."
 }
@@ -873,7 +889,9 @@ main() {
         log "Authenticating sudo (enter your password once)..."
         if ! sudo -v 2>/dev/null; then
             log "User $USER has no sudo access. Trying to grant it via su (enter root password)..."
-            if su -c "usermod -aG sudo $USER && echo '${USER} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${USER}"; then
+            local _grp
+            getent group wheel &>/dev/null && _grp="wheel" || _grp="sudo"
+            if su -c "usermod -aG $_grp $USER && echo '${USER} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${USER}"; then
                 log "Granted sudo access to $USER. Re-authenticating..."
                 if ! sudo -v; then
                     log_error "sudo still not working after granting access. Try logging out and back in."
@@ -895,9 +913,10 @@ main() {
     if component_enabled "7"; then install_lazyssh       || log_error "lazyssh: failed, continuing."; fi
     if component_enabled "8"; then install_nvim          || log_error "nvim: failed, continuing."; fi
     if component_enabled "9"; then install_nvim_config   || log_error "nvim config: failed, continuing."; fi
+    # aliases (C) must run before nvm/uv so PATH is in .zshrc before tool completions
+    if component_enabled "C"; then add_aliases           || log_error "aliases: failed, continuing."; fi
     if component_enabled "A"; then install_nvm           || log_error "nvm: failed, continuing."; fi
     if component_enabled "B"; then install_uv            || log_error "uv: failed, continuing."; fi
-    if component_enabled "C"; then add_aliases           || log_error "aliases: failed, continuing."; fi
 
     log "All done. Log saved to $LOG_FILE"
 }
