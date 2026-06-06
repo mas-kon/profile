@@ -886,20 +886,22 @@ main() {
     # Authenticate sudo once and cache credentials for the entire session.
     # If user has no sudo access, try to grant it via su (requires root password).
     if [[ "$EUID" -ne 0 ]]; then
-        log "Authenticating sudo (enter your password once)..."
-        if ! sudo -v 2>/dev/null; then
-            log "User $USER has no sudo access. Trying to grant it via su (enter root password)..."
-            local _grp
-            getent group wheel &>/dev/null && _grp="wheel" || _grp="sudo"
-            if su -c "usermod -aG $_grp $USER && echo '${USER} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${USER}"; then
-                log "Granted sudo access to $USER. Re-authenticating..."
-                if ! sudo -v; then
-                    log_error "sudo still not working after granting access. Try logging out and back in."
+        if ! sudo -n true 2>/dev/null; then
+            # No NOPASSWD — either no sudo access at all, or needs password
+            if ! sudo -v 2>/dev/null; then
+                log "User $USER has no sudo access. Trying to grant it via su (enter root password)..."
+                local _grp
+                getent group wheel &>/dev/null && _grp="wheel" || _grp="sudo"
+                if su -c "usermod -aG $_grp $USER && echo '${USER} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${USER}"; then
+                    log "Granted sudo access to $USER. Re-authenticating..."
+                    if ! sudo -n true; then
+                        log_error "sudo still not working after granting access. Try logging out and back in."
+                        exit 1
+                    fi
+                else
+                    log_error "Failed to grant sudo via su. Run as root or ask an administrator."
                     exit 1
                 fi
-            else
-                log_error "Failed to grant sudo via su. Run as root or ask an administrator."
-                exit 1
             fi
         fi
     fi
