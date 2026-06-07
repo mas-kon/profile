@@ -15,7 +15,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/profile
 ### Минимальная установка (только пакеты и алиасы)
 
 ```shell
-bash <(curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/profile.sh) --minimal
+bash <(curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/profile.sh) --min
 ```
 
 ### Полная установка (все компоненты)
