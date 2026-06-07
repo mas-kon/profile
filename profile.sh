@@ -775,7 +775,7 @@ declare -a COMPONENT_STATE=()
 show_interactive_menu() {
     # Apply mode overrides before showing menu
     case "${MODE:-interactive}" in
-        minimal)
+        min)
             COMPONENT_STATE=(N Y Y N N N N N N N N Y)
             return ;;
         full)
@@ -841,16 +841,16 @@ parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --help|-h)
-                echo "Usage: $0 [--help] [--dry-run] [--minimal] [--full]"
+                echo "Usage: $0 [--help] [--dry-run] [--min] [--full]"
                 echo ""
-                echo "  --minimal   Install base packages, oh-my-zsh, tmux, aliases only"
+                echo "  --min   Install base packages, oh-my-zsh, tmux, aliases only"
                 echo "  --full      Install all components"
                 echo "  --dry-run   Show what would be installed, then exit"
                 exit 0 ;;
             --dry-run)
                 DRY_RUN=1 ;;
-            --minimal)
-                MODE="minimal" ;;
+            --min)
+                MODE="min" ;;
             --full)
                 MODE="full" ;;
             *)
