@@ -146,14 +146,32 @@ install_packages() {
 
 # === Logging ==================================================================
 
+# Once start_log_capture() has run, all stdout/stderr (including output of
+# external commands such as npm warnings) is already tee'd into LOG_FILE, so
+# log()/log_error() only print and must not write to the file a second time.
+LOG_CAPTURED=0
+
 log() {
     local msg="[$(date '+%H:%M:%S')] $*"
-    echo "$msg" | tee -a "$LOG_FILE"
+    if [[ "$LOG_CAPTURED" -eq 1 ]]; then
+        echo "$msg"
+    else
+        echo "$msg" | tee -a "$LOG_FILE"
+    fi
 }
 
 log_error() {
     local msg="[$(date '+%H:%M:%S')] ERROR: $*"
-    echo "$msg" | tee -a "$LOG_FILE" >&2
+    if [[ "$LOG_CAPTURED" -eq 1 ]]; then
+        echo "$msg" >&2
+    else
+        echo "$msg" | tee -a "$LOG_FILE" >&2
+    fi
+}
+
+start_log_capture() {
+    exec > >(tee -a "$LOG_FILE") 2>&1
+    LOG_CAPTURED=1
 }
 
 # === Utilities ================================================================
@@ -752,10 +770,14 @@ install_nvim_config() {
     fi
 
     log "Installing tree-sitter-cli via $(command -v npm)..."
-    if npm install -g tree-sitter-cli; then
+    # Newer npm skips install scripts unless allowed; tree-sitter-cli's install.js
+    # downloads the real binary, so allow it explicitly (older npm ignores the flag).
+    if npm install -g --allow-scripts=tree-sitter-cli tree-sitter-cli \
+        && tree-sitter --version &>/dev/null; then
         log "tree-sitter-cli installed."
     else
-        log_error "tree-sitter-cli installation failed."
+        log_error "tree-sitter-cli installation failed (or binary not working)."
+        return 1
     fi
 }
 
@@ -1032,6 +1054,9 @@ main() {
         done
         exit 0
     fi
+
+    # Capture everything from here on (stdout + stderr of all commands) in the log.
+    start_log_capture
 
     # Dry run must run BEFORE anything can install packages (bootstrap_deps).
     bootstrap_deps

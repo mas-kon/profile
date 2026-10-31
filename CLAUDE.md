@@ -37,7 +37,9 @@ bash <(curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/profile
 bash <(curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/profile.sh) --dry-run
 ```
 
-Every run writes a log file to `$HOME/profile_install_<TIMESTAMP>.log`.
+Every run writes a log file to `$HOME/profile_install_<TIMESTAMP>.log`. After the menu and
+`--dry-run` exit, `start_log_capture()` tees all stdout/stderr (incl. external command
+warnings, e.g. npm) into it; `log()`/`log_error()` then only print to avoid duplicates.
 
 ## Architecture of profile.sh
 
