@@ -6,12 +6,28 @@ set -euo pipefail
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 LOG_FILE="$HOME/profile_install_${TIMESTAMP}.log"
 
+# $USER may be unset in containers; guard against `set -u`.
+USER="${USER:-$(id -un 2>/dev/null || true)}"
+
+# Private scratch dir for downloads/extracts instead of fixed paths in /tmp
+# (no collisions between runs/users, cleaned up on exit).
+WORKDIR=$(mktemp -d "${TMPDIR:-/tmp}/profile-install.XXXXXX")
+cleanup() {
+    rm -rf "$WORKDIR"
+}
+trap cleanup EXIT
+
 # === Architecture detection ===================================================
 
 ARCH=$(uname -m)
 case "$ARCH" in
-    x86_64)  ARCH_SUFFIX="x86_64"; ARCH_DEB="amd64"; ARCH_RPM="x86_64"; ARCH_NVIM="x86_64" ;;
-    aarch64) ARCH_SUFFIX="aarch64"; ARCH_DEB="arm64"; ARCH_RPM="aarch64"; ARCH_NVIM="arm64" ;;
+    # ARCH_DEB/RPM/NVIM: .deb/.rpm/tarball names per vendor.
+    # ARCH_GO: goreleaser-style arch (lazygit/lazyssh use x86_64|arm64 with a
+    #          lowercase "linux" for lazygit and "Linux" for lazyssh).
+    # ARCH_TRIPLE: rust target-triple prefix (bottom tarballs like
+    #          bottom_aarch64-unknown-linux-gnu.tar.gz).
+    x86_64)  ARCH_DEB="amd64";  ARCH_RPM="x86_64";  ARCH_NVIM="x86_64"; ARCH_GO="x86_64";  ARCH_TRIPLE="x86_64" ;;
+    aarch64) ARCH_DEB="arm64";  ARCH_RPM="aarch64"; ARCH_NVIM="arm64";  ARCH_GO="arm64";   ARCH_TRIPLE="aarch64" ;;
     *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
@@ -20,7 +36,17 @@ esac
 DISTRO_FAMILY=""
 PKG_UPDATE=""
 PKG_INSTALL=""
-NVM_NODE_VER=""  # populated by install_nvm(), consumed by install_nvim_config()
+
+# Run package-metadata update (PKG_UPDATE is set by detect_distro).
+# `$PKG_UPDATE` is word-split ON PURPOSE (multi-word command string) — do not quote it.
+# dnf check-update exits 100 when updates are available — not an error, so
+# failures are handled here instead of embedding a broken `|| true` in the string.
+update_pkg_cache() {
+    # shellcheck disable=SC2086
+    if ! $PKG_UPDATE; then
+        log "Warning: package update failed (dnf's 100 just means updates available), continuing."
+    fi
+}
 
 detect_distro() {
     if [[ ! -f /etc/os-release ]]; then
@@ -53,10 +79,10 @@ detect_distro() {
             PKG_UPDATE="sudo apt-get update"
             PKG_INSTALL="sudo apt-get install -y" ;;
         fedora)
-            PKG_UPDATE="sudo dnf check-update || true"
+            PKG_UPDATE="sudo dnf check-update"
             PKG_INSTALL="sudo dnf install -y" ;;
         rhel)
-            PKG_UPDATE="sudo dnf check-update || true"
+            PKG_UPDATE="sudo dnf check-update"
             PKG_INSTALL="sudo dnf install -y" ;;
     esac
 
@@ -96,7 +122,26 @@ install_packages() {
     [[ ${#packages[@]} -eq 0 ]] && return
     log "Installing packages: ${packages[*]}"
     # shellcheck disable=SC2086
-    $PKG_INSTALL "${packages[@]}"
+    if $PKG_INSTALL "${packages[@]}"; then
+        return
+    fi
+    # One unavailable package fails the whole batch — retry one by one so the
+    # rest still lands (common on RHEL where EPEL coverage differs).
+    log "Bulk install failed, retrying packages individually..."
+    local failed=() pkg
+    for pkg in "${packages[@]}"; do
+        # NOTE: `$PKG_UPDATE`/`$PKG_INSTALL`/`$pkg` word-splitting is intentional
+        # (multi-word strings like "python3-full python3-venv") — do not quote.
+        # shellcheck disable=SC2086
+        if ! $PKG_INSTALL $pkg; then
+            failed+=("$pkg")
+            log_error "Package not available: $pkg"
+        fi
+    done
+    if [[ ${#failed[@]} -gt 0 ]]; then
+        log_error "Failed to install packages: ${failed[*]}"
+        return 1
+    fi
 }
 
 # === Logging ==================================================================
@@ -158,39 +203,76 @@ bootstrap_deps() {
     command -v sudo &>/dev/null || missing+=(sudo)
     command -v curl &>/dev/null || missing+=(curl)
 
-    if [[ ${#missing[@]} -eq 0 ]]; then
-        return
-    fi
-
-    log "Missing packages: ${missing[*]}. Installing..."
-    if [[ "$EUID" -eq 0 ]]; then
-        case "$DISTRO_FAMILY" in
-            debian) apt-get update && apt-get install -y "${missing[@]}" ;;
-            fedora|rhel) dnf install -y "${missing[@]}" ;;
-        esac
-    else
-        case "$DISTRO_FAMILY" in
-            debian) su -c "apt-get update && apt-get install -y ${missing[*]}" ;;
-            fedora|rhel) su -c "dnf install -y ${missing[*]}" ;;
-        esac
-    fi
-
-    if ! id -nG "$USER" | grep -qw "sudo"; then
-        log "Adding $USER to sudo group..."
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        log "Missing packages: ${missing[*]}. Installing..."
         if [[ "$EUID" -eq 0 ]]; then
-            usermod -aG sudo "$USER"
-            echo "${USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${USER}"
+            case "$DISTRO_FAMILY" in
+                debian) apt-get update && apt-get install -y "${missing[@]}" ;;
+                fedora|rhel) dnf install -y "${missing[@]}" ;;
+            esac
         else
-            su -c "/sbin/usermod -aG sudo $USER && echo '${USER} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${USER}"
+            case "$DISTRO_FAMILY" in
+                debian) su -c "apt-get update && apt-get install -y ${missing[*]}" ;;
+                fedora|rhel) su -c "dnf install -y ${missing[*]}" ;;
+            esac
         fi
+    fi
+
+    # Tools every installer relies on (GitHub API parsing, git clones).
+    # Without them the installers fail with a misleading "Invalid JSON response".
+    local need=() tool
+    for tool in jq git; do
+        command -v "$tool" &>/dev/null || need+=("$tool")
+    done
+    if [[ ${#need[@]} -gt 0 ]]; then
+        log "Installing required tools: ${need[*]}..."
+        # Failures fall through to the explicit check below instead of tripping set -e.
+        if [[ "$EUID" -eq 0 ]]; then
+            case "$DISTRO_FAMILY" in
+                debian) { apt-get update && apt-get install -y "${need[@]}"; } || true ;;
+                fedora|rhel) dnf install -y "${need[@]}" || true ;;
+            esac
+        else
+            case "$DISTRO_FAMILY" in
+                debian) { sudo apt-get update && sudo apt-get install -y "${need[@]}"; } || true ;;
+                fedora|rhel) sudo dnf install -y "${need[@]}" || true ;;
+            esac
+        fi
+    fi
+
+    if ! command -v jq &>/dev/null || ! command -v git &>/dev/null; then
+        log_error "Required tools (jq/git) could not be installed; install them manually and rerun."
+        return 1
     fi
 }
 
+# Opt-in only (menu component 1). Validates the entry with visudo before
+# installing it, uses 0440 mode, and avoids "." filenames that sudo ignores.
 add_sudoers_entry() {
-    if [[ ! -f /etc/sudoers.d/${USER} ]] && (id -nG "$USER" | grep -qw "sudo" || id -nG "$USER" | grep -qw "wheel" || id -nG "$USER" | grep -qw "adm"); then
-        echo "${USER} ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/${USER} > /dev/null
-        log "Sudoers entry added for $USER."
+    local fname="${USER//./_}"
+    local file="/etc/sudoers.d/${fname}"
+    local entry="${USER} ALL=(ALL) NOPASSWD:ALL"
+    local tmp="$WORKDIR/sudoers-entry"
+
+    if [[ -f "$file" ]]; then
+        log "Sudoers entry already present for $USER, skipping."
+        return 0
     fi
+    if ! (id -nG "$USER" | grep -qw "sudo" || id -nG "$USER" | grep -qw "wheel" || id -nG "$USER" | grep -qw "adm"); then
+        log "User $USER is not in a sudo/wheel group; sudoers entry would have no effect, skipping."
+        return 0
+    fi
+
+    echo "$entry" > "$tmp"
+    if ! sudo visudo -cf "$tmp"; then
+        log_error "Sudoers entry failed validation, not installed."
+        return 1
+    fi
+    if ! sudo install -m 0440 "$tmp" "$file"; then
+        log_error "Failed to install sudoers entry."
+        return 1
+    fi
+    log "Sudoers entry added for $USER (file: /etc/sudoers.d/${fname}, mode 0440)."
 }
 
 # === Base packages ============================================================
@@ -203,12 +285,12 @@ install_base_packages() {
         log "Enabling EPEL repository..."
         sudo dnf install -y epel-release || log "Warning: epel-release not available (may already be enabled)."
         sudo dnf install -y epel-next-release 2>/dev/null || true
-        $PKG_UPDATE
+        update_pkg_cache
     fi
 
     local canonical_packages=(
         tree mc bat zsh curl wget tmux vim htop git
-        chrony sysstat ncdu jq ripgrep net-tools
+        chrony sysstat ncdu duf jq ripgrep net-tools
         dns-tools iotop gpg parted fonts-powerline
         python3 dev-tools ca-certs
     )
@@ -221,7 +303,7 @@ install_base_packages() {
     done
 
     if [[ "$DISTRO_FAMILY" == "debian" ]]; then
-        $PKG_UPDATE
+        update_pkg_cache
     fi
     install_packages "${resolved[@]}"
 
@@ -236,7 +318,12 @@ install_base_packages() {
         sudo apt-get install -y gping || log "Warning: gping not available in apt, skipping."
     fi
 
-    curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -o ~/.vimrc
+    backup_config ~/.vimrc
+    if curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/vimrc -o ~/.vimrc; then
+        log "Vimrc downloaded to ~/.vimrc."
+    else
+        log "Warning: could not download vimrc."
+    fi
     log "Base packages installed."
 }
 
@@ -266,46 +353,43 @@ install_lazygit() {
         fi
     fi
 
-    local url="https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz"
+    # Asset naming is all-lowercase goreleaser style: lazygit_<ver>_linux_<arch>.tar.gz
+    local asset="lazygit_${LAZYGIT_VERSION}_linux_${ARCH_GO}.tar.gz"
+    local url="https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/${asset}"
     check_url_exists "$url" || return 1
 
-    if ! curl -Lo /tmp/lazygit.tar.gz "$url"; then
+    if ! curl -Lo "$WORKDIR/lazygit.tar.gz" "$url"; then
         log_error "Failed to download Lazygit archive."
         return 1
     fi
 
     local checksum_url="https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/checksums.txt"
-    if curl -fsSL -o /tmp/lazygit_checksums.txt "$checksum_url" 2>/dev/null; then
+    if curl -fsSL -o "$WORKDIR/lazygit_checksums.txt" "$checksum_url" 2>/dev/null; then
         local expected_hash actual_hash
-        expected_hash=$(grep "lazygit_${LAZYGIT_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz" /tmp/lazygit_checksums.txt | awk '{print $1}' | tr -d '\r')
-        actual_hash=$(sha256sum /tmp/lazygit.tar.gz | awk '{print $1}')
+        expected_hash=$(grep "$asset" "$WORKDIR/lazygit_checksums.txt" | awk '{print $1}' | tr -d '\r')
+        actual_hash=$(sha256sum "$WORKDIR/lazygit.tar.gz" | awk '{print $1}')
         if [[ -z "$expected_hash" ]]; then
             log "Warning: Hash entry not found in checksums.txt, skipping verification."
         elif [[ "$expected_hash" == "$actual_hash" ]]; then
             log "Lazygit checksum verified."
         else
             log_error "Checksum verification failed for Lazygit (expected: $expected_hash, got: $actual_hash)."
-            rm -f /tmp/lazygit.tar.gz /tmp/lazygit_checksums.txt
             return 1
         fi
-        rm -f /tmp/lazygit_checksums.txt
     else
         log "Warning: Could not download checksums file, skipping verification."
     fi
 
-    if ! tar xf /tmp/lazygit.tar.gz -C /tmp lazygit; then
+    if ! tar xf "$WORKDIR/lazygit.tar.gz" -C "$WORKDIR" lazygit; then
         log_error "Failed to extract Lazygit archive."
-        rm -f /tmp/lazygit.tar.gz
         return 1
     fi
 
-    if ! sudo install /tmp/lazygit -D -t /usr/local/bin/; then
+    if ! sudo install "$WORKDIR/lazygit" -D -t /usr/local/bin/; then
         log_error "Failed to install Lazygit."
-        rm -f /tmp/lazygit.tar.gz /tmp/lazygit
         return 1
     fi
 
-    rm -f /tmp/lazygit.tar.gz /tmp/lazygit
     log "Lazygit installed."
 }
 
@@ -339,38 +423,45 @@ install_bottom() {
         debian)
             local url="https://github.com/ClementTsang/bottom/releases/download/${BTM_VERSION}/bottom_${BTM_VERSION}-1_${ARCH_DEB}.deb"
             check_url_exists "$url" || return 1
-            if ! curl -Lo "/tmp/bottom_${ARCH_DEB}.deb" "$url"; then
+            if ! curl -Lo "$WORKDIR/bottom.deb" "$url"; then
                 log_error "Failed to download Bottom package."
                 return 1
             fi
-            if ! sudo dpkg -i "/tmp/bottom_${ARCH_DEB}.deb"; then
+            if ! sudo dpkg -i "$WORKDIR/bottom.deb"; then
                 log_error "Failed to install Bottom package."
-                rm -f "/tmp/bottom_${ARCH_DEB}.deb"
                 return 1
             fi
-            rm -f "/tmp/bottom_${ARCH_DEB}.deb"
             ;;
         fedora|rhel)
             local rpm_url="https://github.com/ClementTsang/bottom/releases/download/${BTM_VERSION}/bottom-${BTM_VERSION}-1.${ARCH_RPM}.rpm"
             if check_url_exists "$rpm_url" 2>/dev/null; then
-                if ! curl -Lo "/tmp/bottom.rpm" "$rpm_url"; then
+                if ! curl -Lo "$WORKDIR/bottom.rpm" "$rpm_url"; then
                     log_error "Failed to download Bottom RPM."
                     return 1
                 fi
-                if ! sudo rpm -i "/tmp/bottom.rpm"; then
+                # rpm -U installs fresh AND upgrades — rpm -i fails on upgrade.
+                if ! sudo rpm -U "$WORKDIR/bottom.rpm"; then
                     log_error "Failed to install Bottom RPM."
-                    rm -f "/tmp/bottom.rpm"
                     return 1
                 fi
-                rm -f "/tmp/bottom.rpm"
             else
-                log "RPM not found, falling back to tarball..."
-                local tar_url="https://github.com/ClementTsang/bottom/releases/download/${BTM_VERSION}/bottom_${BTM_VERSION}_Linux_${ARCH_SUFFIX}.tar.gz"
+                # No RPM for this arch (e.g. aarch64) — tarball fallback.
+                # Asset naming: bottom_<triple>-unknown-linux-gnu.tar.gz (no version in the name)
+                log "RPM not found for this arch, falling back to tarball..."
+                local tar_url="https://github.com/ClementTsang/bottom/releases/download/${BTM_VERSION}/bottom_${ARCH_TRIPLE}-unknown-linux-gnu.tar.gz"
                 check_url_exists "$tar_url" || return 1
-                curl -Lo /tmp/bottom.tar.gz "$tar_url"
-                tar xf /tmp/bottom.tar.gz -C /tmp btm
-                sudo install /tmp/btm -D -t /usr/local/bin/
-                rm -f /tmp/bottom.tar.gz /tmp/btm
+                if ! curl -Lo "$WORKDIR/bottom.tar.gz" "$tar_url"; then
+                    log_error "Failed to download Bottom tarball."
+                    return 1
+                fi
+                if ! tar xf "$WORKDIR/bottom.tar.gz" -C "$WORKDIR" btm; then
+                    log_error "Failed to extract Bottom tarball."
+                    return 1
+                fi
+                if ! sudo install "$WORKDIR/btm" -D -t /usr/local/bin/; then
+                    log_error "Failed to install Bottom binary."
+                    return 1
+                fi
             fi
             ;;
     esac
@@ -404,34 +495,49 @@ install_lazyssh() {
         fi
     fi
 
-    local archive="lazyssh_$(uname)_$(uname -m).tar.gz"
+    # Asset naming: lazyssh_Linux_x86_64.tar.gz / lazyssh_Linux_arm64.tar.gz —
+    # uname -m gives aarch64 on ARM, so use the normalised arch instead.
+    local archive="lazyssh_$(uname)_${ARCH_GO}.tar.gz"
     local url="https://github.com/Adembc/lazyssh/releases/download/${LATEST_TAG}/${archive}"
     check_url_exists "$url" || return 1
 
-    if ! curl -LJo "/tmp/${archive}" "$url"; then
+    if ! curl -LJo "$WORKDIR/${archive}" "$url"; then
         log_error "Failed to download LazySSH archive."
         return 1
     fi
 
-    if ! tar -xzf "/tmp/${archive}" -C /tmp lazyssh; then
+    local checksum_url="https://github.com/Adembc/lazyssh/releases/download/${LATEST_TAG}/checksums.txt"
+    if curl -fsSL -o "$WORKDIR/lazyssh_checksums.txt" "$checksum_url" 2>/dev/null; then
+        local expected_hash actual_hash
+        expected_hash=$(grep "$archive" "$WORKDIR/lazyssh_checksums.txt" | awk '{print $1}' | tr -d '\r')
+        actual_hash=$(sha256sum "$WORKDIR/${archive}" | awk '{print $1}')
+        if [[ -z "$expected_hash" ]]; then
+            log "Warning: Hash entry not found in checksums.txt, skipping verification."
+        elif [[ "$expected_hash" == "$actual_hash" ]]; then
+            log "LazySSH checksum verified."
+        else
+            log_error "Checksum verification failed for LazySSH (expected: $expected_hash, got: $actual_hash)."
+            return 1
+        fi
+    else
+        log "Warning: Could not download checksums file, skipping verification."
+    fi
+
+    if ! tar -xzf "$WORKDIR/${archive}" -C "$WORKDIR" lazyssh; then
         log_error "Failed to extract LazySSH archive."
-        rm -f "/tmp/${archive}"
         return 1
     fi
 
-    if [[ ! -f /tmp/lazyssh ]]; then
+    if [[ ! -f "$WORKDIR/lazyssh" ]]; then
         log_error "LazySSH binary not found after extraction."
-        rm -f "/tmp/${archive}"
         return 1
     fi
 
-    if ! sudo mv /tmp/lazyssh /usr/local/bin/; then
-        log_error "Failed to move LazySSH binary to /usr/local/bin/."
-        rm -f "/tmp/${archive}"
+    if ! sudo install -m 0755 "$WORKDIR/lazyssh" /usr/local/bin/lazyssh; then
+        log_error "Failed to install LazySSH binary to /usr/local/bin/."
         return 1
     fi
 
-    rm -f "/tmp/${archive}"
     log "LazySSH installed."
 }
 
@@ -445,12 +551,39 @@ install_oh_my_zsh() {
         return 1
     fi
 
+    # Back up .zshrc BEFORE anything can overwrite it (the installer replaces it
+    # unless KEEP_ZSHRC is set, which is why the manual backup here matters).
+    if [[ -f ~/.zshrc ]]; then
+        backup_config ~/.zshrc
+    fi
+
+    # Download the installer first; only remove the existing install when the
+    # source is reachable — a failed download must not destroy the old setup.
+    if ! curl -fsSL -o "$WORKDIR/omz-install.sh" https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh; then
+        log_error "Failed to download Oh-My-Zsh installer (network error). Old installation left intact."
+        return 1
+    fi
+
     if [[ -d ~/.oh-my-zsh ]]; then
+        backup_config ~/.oh-my-zsh
         rm -rf ~/.oh-my-zsh
         log "Removed ~/.oh-my-zsh."
     fi
 
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    # KEEP_ZSHRC only when the current .zshrc already sources oh-my-zsh;
+    # otherwise let the installer write a fresh .zshrc (it keeps the old one
+    # as .zshrc.pre-oh-my-zsh). With KEEP_ZSHRC a distro-skeleton .zshrc
+    # would be kept but would never source oh-my-zsh.
+    if [[ -f ~/.zshrc ]] && grep -q 'oh-my-zsh' ~/.zshrc; then
+        KEEP_ZSHRC=yes sh "$WORKDIR/omz-install.sh" --unattended
+    else
+        sh "$WORKDIR/omz-install.sh" --unattended
+    fi
+
+    if [[ ! -d ~/.oh-my-zsh ]]; then
+        log_error "Oh-My-Zsh installation failed."
+        return 1
+    fi
 
     local plugins_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins"
     mkdir -p "$plugins_dir"
@@ -468,7 +601,6 @@ install_oh_my_zsh() {
     fi
 
     if [[ -f ~/.zshrc ]]; then
-        backup_config ~/.zshrc
         sed -i 's/robbyrussell/bira/' ~/.zshrc
         sed -i 's/plugins=(.*)/plugins=(z git zsh-syntax-highlighting jira zsh-autosuggestions aliases poetry battery terraform aws docker docker-compose kubectl)/' ~/.zshrc
     else
@@ -476,7 +608,7 @@ install_oh_my_zsh() {
         return 1
     fi
 
-    sudo chsh -s "$(which zsh)" "$USER"
+    sudo chsh -s "$(command -v zsh)" "$USER"
     log "Oh-My-Zsh installed."
 }
 
@@ -485,21 +617,34 @@ install_oh_my_zsh() {
 install_tmux() {
     log "Installing tmux configuration..."
 
+    # Clone first; a failed clone must not destroy the existing setup.
+    if ! git clone --depth 1 --single-branch https://github.com/gpakosz/.tmux.git "$WORKDIR/.tmux"; then
+        log_error "Failed to clone gpakosz/.tmux. Existing configuration left intact."
+        return 1
+    fi
+
     if [[ -d ~/.tmux ]]; then
         backup_config ~/.tmux
         rm -rf ~/.tmux
     fi
+    mv "$WORKDIR/.tmux" ~/.tmux
 
-    git clone --depth 1 --single-branch https://github.com/gpakosz/.tmux.git ~/.tmux
+    # A regular ~/.tmux.conf is the user's own file; the usual symlink is not.
+    [[ -L ~/.tmux.conf ]] || backup_config ~/.tmux.conf
     ln -sf ~/.tmux/.tmux.conf ~/.tmux.conf
-    cp ~/.tmux/.tmux.conf.local ~/.tmux.conf.local
+
+    # Back up the user's local config BEFORE anything overwrites it; a fresh
+    # template is only used as the base when no local config exists yet.
+    if [[ -f ~/.tmux.conf.local ]]; then
+        backup_config ~/.tmux.conf.local
+    else
+        cp ~/.tmux/.tmux.conf.local ~/.tmux.conf.local
+    fi
 
     if grep -q 'tmux-plugins/tmux-sessionist' ~/.tmux.conf.local 2>/dev/null; then
         log "Tmux config already configured, skipping."
         return
     fi
-
-    backup_config ~/.tmux.conf.local
 
     {
         echo 'set -g default-terminal "tmux-256color"'
@@ -551,7 +696,7 @@ install_nvim() {
     local url="https://github.com/neovim/neovim/releases/download/${NVIM_VERSION}/nvim-linux-${ARCH_NVIM}.tar.gz"
     check_url_exists "$url" || return 1
 
-    if ! curl -Lo /tmp/nvim.tar.gz "$url"; then
+    if ! curl -Lo "$WORKDIR/nvim.tar.gz" "$url"; then
         log_error "Failed to download Neovim archive."
         return 1
     fi
@@ -559,14 +704,12 @@ install_nvim() {
     local install_dir="/opt/nvim-${NVIM_VERSION}"
     sudo mkdir -p "$install_dir"
 
-    if ! sudo tar xf /tmp/nvim.tar.gz -C "$install_dir" --strip-components=1; then
+    if ! sudo tar xf "$WORKDIR/nvim.tar.gz" -C "$install_dir" --strip-components=1; then
         log_error "Failed to extract Neovim archive."
-        rm -f /tmp/nvim.tar.gz
         return 1
     fi
 
     sudo ln -sf "${install_dir}/bin/nvim" /usr/local/bin/nvim
-    rm -f /tmp/nvim.tar.gz
     log "Neovim installed."
 }
 
@@ -576,7 +719,10 @@ install_nvim_config() {
     mkdir -p ~/.config
 
     if [[ -d ~/.config/nvim/.git ]]; then
-        git -C ~/.config/nvim pull --ff-only
+        if ! git -C ~/.config/nvim pull --ff-only; then
+            log_error "Failed to update Neovim config (pull failed)."
+            return 1
+        fi
         log "Neovim config updated."
     else
         backup_config ~/.config/nvim
@@ -588,25 +734,28 @@ install_nvim_config() {
         log "Neovim config cloned to ~/.config/nvim"
     fi
 
-    # tree-sitter-cli is required by the nvim config.
-    # Build npm path from NVM_NODE_VER (set during install_nvm) or scan ~/.nvm as fallback.
-    local npm_bin=""
-    if [[ -n "$NVM_NODE_VER" ]]; then
-        npm_bin="$HOME/.nvm/versions/node/${NVM_NODE_VER}/bin/npm"
-    else
-        # Fallback: find the first npm binary under ~/.nvm (previous nvm install)
-        npm_bin=$(find "$HOME/.nvm/versions/node" -name npm -type f 2>/dev/null | sort -V | tail -1)
+    # tree-sitter-cli is required by the nvim config. Load nvm.sh so both npm
+    # and node land on PATH — works in this run (after install_nvm) and for a
+    # previously installed nvm.
+    export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+    if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+        set +u  # nvm.sh uses unbound variables internally
+        # shellcheck source=/dev/null
+        \. "$NVM_DIR/nvm.sh"
+        nvm use --lts >/dev/null 2>&1 || true
+        set -u
     fi
 
-    if [[ -n "$npm_bin" && -x "$npm_bin" ]]; then
-        log "Installing tree-sitter-cli via $npm_bin..."
-        if "$npm_bin" install -g tree-sitter-cli; then
-            log "tree-sitter-cli installed."
-        else
-            log_error "tree-sitter-cli installation failed."
-        fi
-    else
+    if ! command -v npm &>/dev/null; then
         log "Warning: npm not found, skipping tree-sitter-cli. Run 'npm install -g tree-sitter-cli' after login."
+        return 0
+    fi
+
+    log "Installing tree-sitter-cli via $(command -v npm)..."
+    if npm install -g tree-sitter-cli; then
+        log "tree-sitter-cli installed."
+    else
+        log_error "tree-sitter-cli installation failed."
     fi
 }
 
@@ -633,10 +782,12 @@ install_nvm() {
     fi
 
     backup_config ~/.zshrc
-    {
-        echo 'export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"'
-        echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
-    } >> ~/.zshrc
+    if ! grep -q 'NVM_DIR' ~/.zshrc 2>/dev/null; then
+        {
+            echo 'export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"'
+            echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"'
+        } >> ~/.zshrc
+    fi
 
     export NVM_DIR="$HOME/.nvm"
     if [[ -s "$NVM_DIR/nvm.sh" ]]; then
@@ -649,7 +800,6 @@ install_nvm() {
             return 1
         fi
         nvm use --lts
-        NVM_NODE_VER=$(node --version 2>/dev/null || true)
         set -u
     else
         log_error "NVM script not found at $NVM_DIR/nvm.sh"
@@ -678,7 +828,8 @@ install_uv() {
 
     backup_config ~/.zshrc
 
-    if ! grep -q '$HOME/.local/bin' ~/.zshrc; then
+    # Matches both "$HOME/.local/bin" and an already-expanded absolute path.
+    if ! grep -q '\.local/bin' ~/.zshrc; then
         echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
     fi
 
@@ -703,13 +854,13 @@ add_aliases() {
     backup_config ~/.zshrc
 
     {
-        echo "export PATH=\$PATH:/usr/sbin/:$HOME/.local/bin"
+        echo 'export PATH="$PATH:/usr/sbin:$HOME/.local/bin"'
         echo "alias sst='ss -nlptu'"
         echo "alias sss='sudo -s'"
         echo "alias less='less -F'"
         echo "alias q='exit'"
         echo "alias m='more'"
-        echo "alias grep='grep --colour=always'"
+        echo "alias grep='grep --colour=auto'"
         echo "alias g='grep'"
         echo "alias tt='tail -f'"
         echo "alias getip='curl -fsSL eth0.me'"
@@ -843,7 +994,7 @@ parse_args() {
             --help|-h)
                 echo "Usage: $0 [--help] [--dry-run] [--min] [--full]"
                 echo ""
-                echo "  --min   Install base packages, oh-my-zsh, tmux, aliases only"
+                echo "  --min       Install base packages, oh-my-zsh, aliases only (no nvim/tools)"
                 echo "  --full      Install all components"
                 echo "  --dry-run   Show what would be installed, then exit"
                 exit 0 ;;
@@ -871,7 +1022,6 @@ main() {
     echo ""
 
     detect_distro
-    bootstrap_deps
     show_interactive_menu
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -883,26 +1033,16 @@ main() {
         exit 0
     fi
 
-    # Authenticate sudo once and cache credentials for the entire session.
-    # If user has no sudo access, try to grant it via su (requires root password).
-    if [[ "$EUID" -ne 0 ]]; then
-        if ! sudo -n true 2>/dev/null; then
-            # No NOPASSWD — either no sudo access at all, or needs password
-            if ! sudo -v 2>/dev/null; then
-                log "User $USER has no sudo access. Trying to grant it via su (enter root password)..."
-                local _grp
-                getent group wheel &>/dev/null && _grp="wheel" || _grp="sudo"
-                if su -c "usermod -aG $_grp $USER && echo '${USER} ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/${USER}"; then
-                    log "Granted sudo access to $USER. Re-authenticating..."
-                    if ! sudo -n true; then
-                        log_error "sudo still not working after granting access. Try logging out and back in."
-                        exit 1
-                    fi
-                else
-                    log_error "Failed to grant sudo via su. Run as root or ask an administrator."
-                    exit 1
-                fi
-            fi
+    # Dry run must run BEFORE anything can install packages (bootstrap_deps).
+    bootstrap_deps
+
+    # Make sure sudo works for the rest of the run. Never silently grant
+    # passwordless sudo or shuffle groups — passwordless sudo is opt-in
+    # (menu component 1) and group changes are out of scope for this script.
+    if [[ "$EUID" -ne 0 ]] && ! sudo -n true 2>/dev/null; then
+        if ! sudo -v; then
+            log_error "sudo is not available for user $USER. Run the script as root or grant sudo access, then rerun."
+            exit 1
         fi
     fi
 
@@ -914,10 +1054,11 @@ main() {
     if component_enabled "6"; then install_bottom        || log_error "bottom: failed, continuing."; fi
     if component_enabled "7"; then install_lazyssh       || log_error "lazyssh: failed, continuing."; fi
     if component_enabled "8"; then install_nvim          || log_error "nvim: failed, continuing."; fi
-    if component_enabled "9"; then install_nvim_config   || log_error "nvim config: failed, continuing."; fi
-    # aliases (C) must run before nvm/uv so PATH is in .zshrc before tool completions
+    # aliases (C) set PATH before nvm/uv completions; nvim config (9) needs npm
+    # from nvm, so it runs AFTER nvm (A).
     if component_enabled "C"; then add_aliases           || log_error "aliases: failed, continuing."; fi
     if component_enabled "A"; then install_nvm           || log_error "nvm: failed, continuing."; fi
+    if component_enabled "9"; then install_nvim_config   || log_error "nvim config: failed, continuing."; fi
     if component_enabled "B"; then install_uv            || log_error "uv: failed, continuing."; fi
 
     log "All done. Log saved to $LOG_FILE"

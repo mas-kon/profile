@@ -12,7 +12,7 @@
 bash <(curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/profile.sh)
 ```
 
-### Минимальная установка (только пакеты и алиасы)
+### Минимальная установка (базовые пакеты, oh-my-zsh и алиасы, без nvim и инструментов)
 
 ```shell
 bash <(curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/profile.sh) --min

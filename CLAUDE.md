@@ -14,7 +14,7 @@ RHEL/Rocky/AlmaLinux. Architectures: x86_64 and aarch64.
 
 ## Repository Structure
 
-- [profile.sh](profile.sh) — main installation script (~930 lines), distro-independent
+- [profile.sh](profile.sh) — main installation script (~1060 lines), distro-independent
 - [rename_host.sh](rename_host.sh) — hostname renaming utility
 - [vimrc](vimrc) — Vim configuration (downloaded to `~/.vimrc` during base package install)
 - [postfix.txt](postfix.txt) — Postfix mail server configuration reference (manual setup)
@@ -27,7 +27,7 @@ RHEL/Rocky/AlmaLinux. Architectures: x86_64 and aarch64.
 # Interactive (component selection menu) — default
 bash <(curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/profile.sh)
 
-# Minimal (only base packages, oh-my-zsh, omz plugins, tmux, aliases)
+# Minimal (only base packages, oh-my-zsh, aliases — no nvim/tools)
 bash <(curl -fsSL https://raw.githubusercontent.com/mas-kon/profile/main/profile.sh) --min
 
 # Full (all components, no menu)
@@ -45,9 +45,10 @@ The script follows a layered modular design, in source order:
 
 ### Global setup (top of file)
 - `set -euo pipefail`
-- Constants: `TIMESTAMP`, `LOG_FILE`
-- Architecture detection: `x86_64` / `aarch64` → `ARCH_SUFFIX`, `ARCH_DEB` (`amd64`/`arm64`),
-  `ARCH_RPM`, `ARCH_NVIM` — used for GitHub binary downloads and `.deb`/`.rpm` names
+- Constants: `TIMESTAMP`, `LOG_FILE`; `WORKDIR` (per-run `mktemp -d` scratch dir, removed on EXIT)
+- Architecture detection: `x86_64` / `aarch64` → `ARCH_DEB` (`amd64`/`arm64`),
+  `ARCH_RPM`, `ARCH_NVIM`, `ARCH_GO` (goreleaser naming: `x86_64`/`arm64`), and
+  `ARCH_TRIPLE` (rust triple prefix: `x86_64`/`aarch64`) — used for GitHub binary download URLs.
 
 ### Distro abstraction
 - `detect_distro()` — reads `/etc/os-release`, sets `DISTRO_FAMILY` (`debian` | `fedora` | `rhel`),
@@ -64,9 +65,10 @@ The script follows a layered modular design, in source order:
   **at most once per run** (tracked in `_BACKED_UP` associative array)
 
 ### Bootstrap
-- `bootstrap_deps()` — installs missing `sudo`/`curl` (as root or via `su`), adds the user
-  to the sudo group if needed
-- `add_sudoers_entry()` — writes NOPASSWD sudoers entry (component 1)
+- `bootstrap_deps()` — installs missing `sudo`/`curl` (as root or via `su`), then makes sure
+  `jq`/`git` are present (every installer depends on them); it never touches groups or sudoers
+- `add_sudoers_entry()` — opt-in NOPASSWD entry (component 1): sanitizes a "."-containing
+  username for the sudoers.d filename, validates with `visudo -cf`, installs with mode 0440
 
 ### Component installers
 Each tool has its own function that returns non-zero on failure (the main flow logs the
@@ -83,9 +85,9 @@ error and continues to the next component):
 6. **install_tmux()** — clones gpakosz/.tmux, custom config (mouse, tmux-sessionist,
    tmux-resurrect, tmux-continuum), prefix Ctrl+a
 7. **install_nvim()** — Neovim prebuilt tarball for the detected arch → `/opt/nvim`
-8. **install_nvim_config()** — clones `mas-kon/nvim` → `~/.config/nvim`; installs
-   `tree-sitter-cli` via npm (warns and skips if npm absent)
-9. **install_nvm()** — NVM + Node.js LTS; stores the node version in `NVM_NODE_VER`
+8. **install_nvim_config()** — clones `mas-kon/nvim` → `~/.config/nvim`; loads `nvm.sh` for PATH,
+   then installs `tree-sitter-cli` via npm (warns and skips if npm is absent)
+9. **install_nvm()** — NVM + Node.js LTS
 10. **install_uv()** — uv via astral.sh install script; PATH and shell completions in `.zshrc`
 11. **add_aliases()** — common aliases in `.zshrc`; conditional aliases for
     bat (`batcat` on Debian, `bat` on RPM), `duf`, `lazygit`, `lazyssh`
@@ -102,12 +104,13 @@ error and continues to the next component):
 - `parse_args()` — `--help`, `--dry-run`, `--min`, `--full`; unknown option → error, exit 1
 - `main()` order:
   1. `parse_args` → banner
-  2. `detect_distro` → `bootstrap_deps` → `show_interactive_menu`
-  3. `--dry-run` → print enabled components, exit
-  4. sudo session: if not root and no NOPASSWD, try `sudo -v`; on failure grant sudo
-     access via `su` (requires root password)
+  2. `detect_distro` → `show_interactive_menu`
+  3. `--dry-run` → print enabled components, exit (before any system change, incl. `bootstrap_deps`)
+  4. `bootstrap_deps` (needed tools only; requires sudo to work — errors out otherwise,
+     never grants NOPASSWD or group membership on its own)
   5. Run enabled installers via `component_enabled`, each as `install_x || log_error "…: failed, continuing."`
-  6. Note: aliases (C) run **before** nvm (A) and uv (B) so PATH is set before completions
+  6. Order matters: aliases (C) run before nvm (A) and uv (B) so PATH is set before completions;
+     nvim config (9) runs AFTER nvm (A) because it needs npm from nvm for `tree-sitter-cli`
 
 ## Key Conventions
 
